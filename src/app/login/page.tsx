@@ -22,33 +22,33 @@ export default async function LoginPage() {
   return (
     <main className="min-h-screen bg-[var(--background)]">
       <header className="bg-[linear-gradient(135deg,var(--brand-primary),var(--brand-accent-strong))] px-4 py-4 text-white shadow-sm">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <Image
               alt="Biglee"
-              className="h-10 w-10 object-contain"
+              className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
               height={40}
               src="/biglee-logo.png"
               width={40}
             />
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/75">
                 biglee.io
               </p>
-              <h1 className="mt-1 text-base font-black md:text-lg">
+              <h1 className="mt-1 text-sm font-black leading-tight sm:text-base md:text-lg">
                 Registro de ingresos hospitalarios
               </h1>
             </div>
           </div>
-          <p className="hidden rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20 sm:block">
+          <p className="w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white ring-1 ring-white/20 sm:text-sm">
             Ayuda Venezuela
           </p>
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-md flex-col px-4 py-10">
+      <section className="mx-auto flex w-full max-w-md flex-col px-4 py-8 sm:py-10">
         <div className="mb-6 text-center">
-          <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)]">
+          <h2 className="text-xl font-black tracking-tight text-[var(--foreground)] sm:text-2xl">
             Acceso al sistema
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
@@ -56,12 +56,12 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <aside className="rounded-[2rem] bg-white p-6 shadow-lg shadow-[rgba(22,63,82,0.12)] ring-1 ring-[var(--brand-border)] md:p-7">
+        <aside className="rounded-3xl bg-white p-5 shadow-lg shadow-[rgba(22,63,82,0.12)] ring-1 ring-[var(--brand-border)] sm:p-6 md:p-7">
           <div className="mb-6">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)]">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)] sm:text-sm">
               Personal autorizado
             </p>
-            <h3 className="mt-3 text-2xl font-black text-[var(--foreground)]">
+            <h3 className="mt-3 text-xl font-black text-[var(--foreground)] sm:text-2xl">
               Iniciar sesion
             </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">

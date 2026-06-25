@@ -28,12 +28,12 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
   }, [state.ok]);
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-5">
+    <form ref={formRef} action={formAction} className="min-w-0 max-w-full space-y-5">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)]">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
           Nuevo registro
         </p>
-        <h2 className="mt-1 text-2xl font-black text-[var(--foreground)]">
+        <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
           Registrar ingreso
         </h2>
         <p className="mt-1 text-sm leading-6 text-[var(--brand-muted)]">
@@ -61,7 +61,7 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <Field
           error={state.fieldErrors?.nombres}
           label="Nombres"
@@ -90,13 +90,13 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <label className="block min-w-0 space-y-2">
           <span className="text-sm font-bold text-[var(--foreground)]">
             Hospital
           </span>
           <select
-            className="w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+            className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
             disabled={!hasHospitals}
             name="hospital_id"
             required
@@ -116,12 +116,12 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
           ) : null}
         </label>
 
-        <label className="space-y-2">
+        <label className="block min-w-0 space-y-2">
           <span className="text-sm font-bold text-[var(--foreground)]">
             Estado
           </span>
           <select
-            className="w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+            className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
             name="estado"
           >
             {admissionStatuses.map((estado) => (
@@ -133,12 +133,12 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
         </label>
       </div>
 
-      <label className="space-y-2">
+      <label className="block min-w-0 space-y-2">
         <span className="text-sm font-bold text-[var(--foreground)]">
           Servicio requerido
         </span>
         <textarea
-          className="min-h-28 w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+          className="min-h-28 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
           name="servicio_requerido"
           placeholder="Ej. Traumatologia, cirugia, evaluacion respiratoria"
           required
@@ -151,7 +151,7 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
       </label>
 
       <SubmitButton
-        className="w-full rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)] md:w-auto"
+        className="w-full rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)] sm:w-auto"
         pendingText="Guardando ingreso..."
       >
         Registrar ingreso
@@ -170,12 +170,12 @@ type FieldProps = {
 
 function Field({ label, name, placeholder, error, required }: FieldProps) {
   return (
-    <label className="space-y-2">
+    <label className="block min-w-0 space-y-2">
       <span className="text-sm font-bold text-[var(--foreground)]">
         {label}
       </span>
       <input
-        className="w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+        className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
         name={name}
         placeholder={placeholder}
         required={required}

@@ -18,11 +18,26 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 button,
 input,
 select,
 textarea {
   font: inherit;
+}
+
+img,
+form,
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
 }
 
 ::selection {

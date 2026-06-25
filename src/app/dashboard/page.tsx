@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 import { signOut } from "@/app/dashboard/actions";
 import { AdmissionForm } from "@/components/admission-form";
@@ -12,7 +13,10 @@ type DashboardSearchParams = {
   q?: string;
   hospital_id?: string;
   estado?: string;
+  page?: string;
 };
+
+const PAGE_SIZE = 25;
 
 export const dynamic = "force-dynamic";
 
@@ -40,31 +44,36 @@ export default async function DashboardPage({
 
   const hospitals = (hospitalsData ?? []) as Hospital[];
   const admissions = normalizeAdmissions(admissionsResult.data ?? []);
+  const totalAdmissions = admissionsResult.count ?? 0;
+  const currentPage = getCurrentPage(params.page);
+  const totalPages = Math.max(1, Math.ceil(totalAdmissions / PAGE_SIZE));
+  const visibleFrom = totalAdmissions === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const visibleTo = Math.min(currentPage * PAGE_SIZE, totalAdmissions);
   const lastUpdatedAt = formatSummaryDate(new Date());
 
   return (
-    <main className="min-h-screen bg-[var(--background)]">
+    <main className="min-h-screen overflow-x-hidden bg-[var(--background)]">
       <header className="bg-[linear-gradient(135deg,var(--brand-primary),var(--brand-accent-strong))] text-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 sm:px-4 sm:py-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 max-w-full items-start gap-3 sm:items-center">
             <Image
               alt="Biglee"
-              className="h-11 w-11 object-contain"
+              className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
               height={44}
               src="/biglee-logo.png"
               width={44}
             />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-white/75 sm:text-xs sm:tracking-[0.22em]">
                 biglee.io | Ayuda por terremoto en Venezuela
               </p>
-              <h1 className="mt-1 text-2xl font-black">
+              <h1 className="mt-1 max-w-full text-balance text-base font-black leading-tight sm:text-2xl">
                 Centro de Registro de Ingresos Hospitalarios
               </h1>
             </div>
           </div>
-          <form action={signOut}>
-            <button className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25">
+          <form action={signOut} className="w-full md:w-auto">
+            <button className="w-full rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25 sm:w-auto">
               Cerrar sesion
             </button>
           </form>
@@ -72,17 +81,17 @@ export default async function DashboardPage({
       </header>
 
       <section className="border-b border-[var(--brand-border)] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-7">
-          <div className="grid gap-4 md:grid-cols-3">
+        <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7">
+          <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <SummaryCard label="Hospitales reportando" value={hospitals.length} />
-            <SummaryCard label="Pacientes registrados" value={admissions.length} />
+            <SummaryCard label="Pacientes registrados" value={totalAdmissions} />
             <SummaryCard label="Actualizacion reciente" value={lastUpdatedAt} />
           </div>
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(360px,440px)_1fr]">
-        <section className="h-fit rounded-3xl bg-white p-5 shadow-sm ring-1 ring-[var(--brand-border)] md:p-6">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
+        <section className="min-w-0 h-fit max-w-full rounded-3xl bg-white p-4 shadow-sm ring-1 ring-[var(--brand-border)] sm:p-5 md:p-6">
           {hospitalsError ? (
             <Alert
               message="No pudimos cargar hospitales. Revisa Supabase y las politicas RLS."
@@ -92,14 +101,14 @@ export default async function DashboardPage({
           <AdmissionForm hospitals={hospitals} />
         </section>
 
-        <section className="space-y-5">
-          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-[var(--brand-border)] md:p-6">
+        <section className="min-w-0 max-w-full space-y-5">
+          <div className="min-w-0 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-[var(--brand-border)] sm:p-5 md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)]">
                   Buscar por paciente
                 </p>
-                <h2 className="mt-1 text-2xl font-black text-[var(--foreground)]">
+                <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
                   Consultar ingresos
                 </h2>
                 <p className="mt-1 text-sm text-[var(--brand-muted)]">
@@ -107,20 +116,20 @@ export default async function DashboardPage({
                 </p>
               </div>
               <p className="rounded-full border border-[var(--brand-border)] bg-white px-3 py-1 text-sm font-bold text-[var(--brand-accent-strong)]">
-                {admissions.length} registros
+                {totalAdmissions} registros
               </p>
             </div>
 
-            <form className="mt-5 grid gap-3 md:grid-cols-[1fr_180px_160px_auto]">
+            <form className="mt-5 grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
               <input
-                className="rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+                className="min-h-12 min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
                 defaultValue={params.q ?? ""}
                 name="q"
                 placeholder="Buscar nombre, cedula, procedencia..."
                 type="search"
               />
               <select
-                className="rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+                className="min-h-12 min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
                 defaultValue={params.hospital_id ?? ""}
                 name="hospital_id"
               >
@@ -132,7 +141,7 @@ export default async function DashboardPage({
                 ))}
               </select>
               <select
-                className="rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+                className="min-h-12 min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
                 defaultValue={params.estado ?? ""}
                 name="estado"
               >
@@ -142,7 +151,7 @@ export default async function DashboardPage({
                 <option value="Referido">Referido</option>
                 <option value="Atendido">Atendido</option>
               </select>
-              <button className="rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)]">
+              <button className="min-h-12 rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)]">
                 Buscar
               </button>
             </form>
@@ -156,6 +165,14 @@ export default async function DashboardPage({
           ) : null}
 
           <AdmissionsList admissions={admissions} />
+          <Pagination
+            currentPage={currentPage}
+            params={params}
+            totalPages={totalPages}
+            visibleFrom={visibleFrom}
+            visibleTo={visibleTo}
+            total={totalAdmissions}
+          />
         </section>
       </div>
     </main>
@@ -168,7 +185,7 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-muted)]">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
+      <p className="mt-2 break-words text-xl font-black leading-tight text-[var(--foreground)] sm:text-2xl">
         {value}
       </p>
     </div>
@@ -185,6 +202,100 @@ function formatSummaryDate(value: Date) {
   }).format(value);
 }
 
+function Pagination({
+  currentPage,
+  params,
+  totalPages,
+  visibleFrom,
+  visibleTo,
+  total,
+}: {
+  currentPage: number;
+  params: DashboardSearchParams;
+  totalPages: number;
+  visibleFrom: number;
+  visibleTo: number;
+  total: number;
+}) {
+  const previousPage = currentPage - 1;
+  const nextPage = currentPage + 1;
+
+  return (
+    <nav className="flex flex-col gap-3 rounded-3xl bg-white p-4 text-sm shadow-sm ring-1 ring-[var(--brand-border)] sm:flex-row sm:items-center sm:justify-between">
+      <p className="font-semibold text-[var(--brand-muted)]">
+        Mostrando {visibleFrom}-{visibleTo} de {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <PaginationLink
+          disabled={currentPage <= 1}
+          href={getPageHref(params, previousPage)}
+        >
+          Anterior
+        </PaginationLink>
+        <span className="rounded-2xl border border-[var(--brand-border)] px-4 py-2 font-bold text-[var(--foreground)]">
+          {currentPage} / {totalPages}
+        </span>
+        <PaginationLink
+          disabled={currentPage >= totalPages}
+          href={getPageHref(params, nextPage)}
+        >
+          Siguiente
+        </PaginationLink>
+      </div>
+    </nav>
+  );
+}
+
+function PaginationLink({
+  children,
+  disabled,
+  href,
+}: {
+  children: React.ReactNode;
+  disabled: boolean;
+  href: string;
+}) {
+  if (disabled) {
+    return (
+      <span className="rounded-2xl border border-[var(--brand-border)] px-4 py-2 font-bold text-slate-300">
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      className="rounded-2xl border border-[var(--brand-border)] px-4 py-2 font-bold text-[var(--foreground)] transition hover:border-[var(--brand-accent-strong)]"
+      href={href}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function getPageHref(params: DashboardSearchParams, page: number) {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) {
+    searchParams.set("q", params.q);
+  }
+
+  if (params.hospital_id) {
+    searchParams.set("hospital_id", params.hospital_id);
+  }
+
+  if (params.estado) {
+    searchParams.set("estado", params.estado);
+  }
+
+  if (page > 1) {
+    searchParams.set("page", String(page));
+  }
+
+  const query = searchParams.toString();
+  return query ? `/dashboard?${query}` : "/dashboard";
+}
+
 function fetchHospitals(supabase: Awaited<ReturnType<typeof createClient>>) {
   return supabase
     .from("hospitales")
@@ -196,13 +307,18 @@ function fetchAdmissions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   params: DashboardSearchParams,
 ) {
+  const currentPage = getCurrentPage(params.page);
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   let query = supabase
     .from("ingresos_emergencia")
     .select(
       "id,nombres,apellidos,cedula,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
+      { count: "exact" },
     )
     .order("fecha_ingreso", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   const hospitalId = Number(params.hospital_id);
   if (Number.isInteger(hospitalId) && hospitalId > 0) {
@@ -227,6 +343,11 @@ function fetchAdmissions(
   }
 
   return query;
+}
+
+function getCurrentPage(value?: string) {
+  const page = Number(value);
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
 function normalizeSearchTerm(value?: string) {
