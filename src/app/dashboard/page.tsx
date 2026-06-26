@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
 import { ExportCsvButton } from "@/components/export-csv-button";
+import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { EmergencyAdmission, Hospital } from "@/lib/types";
@@ -52,8 +53,14 @@ export default async function DashboardPage({
   const totalPages = Math.max(1, Math.ceil(totalAdmissions / PAGE_SIZE));
   const visibleFrom = totalAdmissions === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const visibleTo = Math.min(currentPage * PAGE_SIZE, totalAdmissions);
-  const lastUpdatedAt = latestAdmission?.created_at
-    ? formatSummaryDate(new Date(latestAdmission.created_at))
+  const lastUpdatedAt = latestAdmission?.fecha_ingreso
+    ? formatAdmissionDate(latestAdmission.fecha_ingreso, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
     : "Sin registros";
 
   return (
@@ -196,17 +203,6 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
   );
 }
 
-function formatSummaryDate(value: Date) {
-  return new Intl.DateTimeFormat("es-VE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/Caracas",
-  }).format(value);
-}
-
 function Pagination({
   currentPage,
   params,
@@ -330,8 +326,8 @@ function fetchHospitals(supabase: Awaited<ReturnType<typeof createClient>>) {
 function fetchLatestAdmission(supabase: Awaited<ReturnType<typeof createClient>>) {
   return supabase
     .from("ingresos_emergencia")
-    .select("created_at")
-    .order("created_at", { ascending: false })
+    .select("fecha_ingreso")
+    .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
 }
@@ -356,7 +352,8 @@ function fetchAdmissions(
       "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       { count: "exact" },
     )
-    .order("created_at", { ascending: false })
+    .order("fecha_ingreso", { ascending: false })
+    .order("id", { ascending: false })
     .range(from, to);
 
   const hospitalId = Number(params.hospital_id);
