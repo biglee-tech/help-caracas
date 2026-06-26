@@ -74,7 +74,7 @@ export function AdmissionsList({ admissions }: AdmissionsListProps) {
                   className="min-h-11 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)]"
                   pendingText="Guardando..."
                 >
-                  Guardar
+                  Actualizar
                 </SubmitButton>
               </form>
             </div>
