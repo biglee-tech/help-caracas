@@ -82,6 +82,13 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
           name="cedula"
           placeholder="Ej. V-12345678"
         />
+        <Field
+          error={state.fieldErrors?.edad}
+          label="Edad"
+          name="edad"
+          placeholder="Ej. 35"
+          type="number"
+        />
         <label className="block min-w-0 space-y-2">
           <span className="text-sm font-bold text-[var(--foreground)]">
             Sexo
@@ -187,9 +194,17 @@ type FieldProps = {
   placeholder: string;
   error?: string | null;
   required?: boolean;
+  type?: "text" | "number";
 };
 
-function Field({ label, name, placeholder, error, required }: FieldProps) {
+function Field({
+  label,
+  name,
+  placeholder,
+  error,
+  required,
+  type = "text",
+}: FieldProps) {
   return (
     <label className="block min-w-0 space-y-2">
       <span className="text-sm font-bold text-[var(--foreground)]">
@@ -200,7 +215,7 @@ function Field({ label, name, placeholder, error, required }: FieldProps) {
         name={name}
         placeholder={placeholder}
         required={required}
-        type="text"
+        type={type}
       />
       {error ? (
         <span className="text-xs font-medium text-rose-700">{error}</span>

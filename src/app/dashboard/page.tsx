@@ -351,7 +351,7 @@ function fetchAdmissions(
   let query = supabase
     .from("ingresos_emergencia")
     .select(
-      "id,nombres,apellidos,cedula,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
+      "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       { count: "exact" },
     )
     .order("fecha_ingreso", { ascending: false })

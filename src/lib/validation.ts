@@ -14,6 +14,16 @@ const optionalText = z
   .optional()
   .transform((value) => (value ? value : null));
 
+const optionalAge = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.coerce
+    .number({ error: "La edad debe ser un numero" })
+    .int("La edad debe ser un numero entero")
+    .min(0, "La edad no puede ser negativa")
+    .max(130, "La edad no parece valida")
+    .optional(),
+);
+
 export const admissionStatuses = [
   "Pendiente",
   "En atencion",
@@ -35,6 +45,7 @@ export const admissionSchema = z.object({
   nombres: requiredText("Nombres"),
   apellidos: requiredText("Apellidos"),
   cedula: optionalText,
+  edad: optionalAge,
   sexo: sexSchema,
   procedencia: optionalText,
   hospital_id: z.coerce
@@ -52,6 +63,7 @@ export function formDataToAdmissionInput(formData: FormData) {
     nombres: formData.get("nombres"),
     apellidos: formData.get("apellidos"),
     cedula: formData.get("cedula"),
+    edad: formData.get("edad"),
     sexo: formData.get("sexo"),
     procedencia: formData.get("procedencia"),
     hospital_id: formData.get("hospital_id"),

@@ -11,6 +11,7 @@ type ExportAdmission = {
   nombres: string;
   apellidos: string;
   cedula: string | null;
+  edad: number | null;
   sexo: string | null;
   procedencia: string | null;
   hospital_id: number;
@@ -54,7 +55,7 @@ async function fetchAdmissionsForExport(
     let query = supabase
       .from("ingresos_emergencia")
       .select(
-        "id,nombres,apellidos,cedula,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
+        "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       )
       .order("fecha_ingreso", { ascending: false })
       .range(from, from + CHUNK_SIZE - 1);
@@ -108,6 +109,7 @@ function toCsv(rows: ExportAdmission[]) {
     "Nombres",
     "Apellidos",
     "Cedula",
+    "Edad",
     "Sexo",
     "Procedencia",
     "Hospital",
@@ -126,6 +128,7 @@ function toCsv(rows: ExportAdmission[]) {
       row.nombres,
       row.apellidos,
       row.cedula ?? "",
+      row.edad ?? "",
       row.sexo ?? "",
       row.procedencia ?? "",
       hospital?.nombre ?? "",

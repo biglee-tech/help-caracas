@@ -80,8 +80,12 @@ export function AdmissionsList({ admissions }: AdmissionsListProps) {
             </div>
           </div>
 
-          <div className="mt-4 grid min-w-0 gap-3 text-sm text-[var(--brand-muted)] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid min-w-0 gap-3 text-sm text-[var(--brand-muted)] sm:grid-cols-2 lg:grid-cols-5">
             <Info label="Cedula" value={admission.cedula ?? "Sin dato"} />
+            <Info
+              label="Edad"
+              value={admission.edad === null ? "Sin dato" : String(admission.edad)}
+            />
             <Info label="Sexo" value={admission.sexo ?? "Sin dato"} />
             <Info
               label="Procedencia"

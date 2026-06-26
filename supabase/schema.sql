@@ -13,6 +13,7 @@ create table if not exists ingresos_emergencia (
   nombres text not null,
   apellidos text not null,
   cedula text,
+  edad integer,
   sexo text not null default 'No especificado'::text,
   procedencia text,
   hospital_id bigint references hospitales(id) on delete restrict not null,
@@ -24,6 +25,16 @@ create table if not exists ingresos_emergencia (
 
 alter table ingresos_emergencia
 add column if not exists sexo text not null default 'No especificado'::text;
+
+alter table ingresos_emergencia
+add column if not exists edad integer;
+
+alter table ingresos_emergencia
+drop constraint if exists ingresos_emergencia_edad_check;
+
+alter table ingresos_emergencia
+add constraint ingresos_emergencia_edad_check
+check (edad is null or (edad >= 0 and edad <= 130));
 
 alter table hospitales enable row level security;
 alter table ingresos_emergencia enable row level security;

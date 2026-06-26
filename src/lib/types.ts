@@ -9,6 +9,7 @@ export type EmergencyAdmission = {
   nombres: string;
   apellidos: string;
   cedula: string | null;
+  edad: number | null;
   sexo: string;
   procedencia: string | null;
   hospital_id: number;

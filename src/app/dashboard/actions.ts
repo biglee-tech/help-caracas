@@ -31,6 +31,7 @@ export async function createAdmission(
     nombres: parsed.data.nombres,
     apellidos: parsed.data.apellidos,
     cedula: parsed.data.cedula,
+    edad: parsed.data.edad ?? null,
     sexo: parsed.data.sexo,
     procedencia: parsed.data.procedencia,
     hospital_id: parsed.data.hospital_id,
