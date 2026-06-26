@@ -153,6 +153,7 @@ export default async function DashboardPage({
                 <option value="En atencion">En atencion</option>
                 <option value="Referido">Referido</option>
                 <option value="Atendido">Atendido</option>
+                <option value="Fallecido">Fallecido</option>
               </select>
               <button className="min-h-12 rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)]">
                 Buscar
