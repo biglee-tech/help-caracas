@@ -65,12 +65,6 @@ with check (true);
 
 drop policy if exists "Personal autenticado puede actualizar estado" on ingresos_emergencia;
 drop policy if exists "Publico puede actualizar ingresos" on ingresos_emergencia;
-create policy "Publico puede actualizar ingresos"
-on ingresos_emergencia
-for update
-to anon
-using (true)
-with check (true);
 
 -- Opcional: cargar hospitales iniciales desde el panel de Supabase o con inserts como:
 -- insert into hospitales (nombre, ciudad) values ('Hospital Universitario de Caracas', 'Caracas');

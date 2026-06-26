@@ -31,7 +31,7 @@ Abre `http://localhost:3000`.
 
 ## Seguridad
 
-- La app permite registrar, consultar y actualizar estados sin login.
+- La app permite registrar y consultar ingresos sin login.
 - Row Level Security queda habilitado para `hospitales` e
   `ingresos_emergencia`, con policies publicas para el rol `anon`.
 - El frontend solo usa la anon key de Supabase. No agregues `service_role` al

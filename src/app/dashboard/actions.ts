@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import type { AdmissionActionState } from "@/lib/types";
 import {
-  admissionStatusSchema,
   admissionSchema,
   formDataToAdmissionInput,
   getFieldErrors,
@@ -53,23 +52,4 @@ export async function createAdmission(
     ok: true,
     message: "Ingreso registrado correctamente.",
   };
-}
-
-export async function updateAdmissionStatus(formData: FormData) {
-  const supabase = await createClient();
-
-  const id = Number(formData.get("id"));
-  const parsedStatus = admissionStatusSchema.safeParse(formData.get("estado"));
-
-  if (!Number.isInteger(id) || id <= 0 || !parsedStatus.success) {
-    revalidatePath("/dashboard");
-    return;
-  }
-
-  await supabase
-    .from("ingresos_emergencia")
-    .update({ estado: parsedStatus.data })
-    .eq("id", id);
-
-  revalidatePath("/dashboard");
 }

@@ -1,7 +1,4 @@
-import { updateAdmissionStatus } from "@/app/dashboard/actions";
-import { SubmitButton } from "@/components/submit-button";
 import type { EmergencyAdmission } from "@/lib/types";
-import { admissionStatuses } from "@/lib/validation";
 
 type AdmissionsListProps = {
   admissions: EmergencyAdmission[];
@@ -43,40 +40,13 @@ export function AdmissionsList({ admissions }: AdmissionsListProps) {
                   : ""}
               </p>
             </div>
-            <div className="min-w-0 space-y-3 md:min-w-64 md:text-right">
+            <div className="min-w-0 md:min-w-64 md:text-right">
               <time
                 className="block text-sm font-semibold text-[var(--brand-muted)]"
                 dateTime={admission.fecha_ingreso}
               >
                 {formatDate(admission.fecha_ingreso)}
               </time>
-              <form
-                action={updateAdmissionStatus}
-                className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] md:flex md:justify-end"
-              >
-                <input name="id" type="hidden" value={admission.id} />
-                <label className="sr-only" htmlFor={`estado-${admission.id}`}>
-                  Cambiar estado
-                </label>
-                <select
-                  className="min-h-11 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)] md:w-auto"
-                  defaultValue={admission.estado ?? "Pendiente"}
-                  id={`estado-${admission.id}`}
-                  name="estado"
-                >
-                  {admissionStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-                <SubmitButton
-                  className="min-h-11 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)]"
-                  pendingText="Guardando..."
-                >
-                  Actualizar
-                </SubmitButton>
-              </form>
             </div>
           </div>
 
