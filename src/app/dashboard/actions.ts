@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { resolveHospitalId } from "@/lib/hospitals";
 import type { AdmissionActionState } from "@/lib/types";
 import {
   admissionSchema,
@@ -26,6 +27,18 @@ export async function createAdmission(
     };
   }
 
+  const hospitalResult = await resolveHospitalId(supabase, parsed.data);
+
+  if ("error" in hospitalResult) {
+    return {
+      ok: false,
+      message: hospitalResult.error,
+      fieldErrors: hospitalResult.field
+        ? { [hospitalResult.field]: hospitalResult.error }
+        : undefined,
+    };
+  }
+
   const { error } = await supabase.from("ingresos_emergencia").insert({
     nombres: parsed.data.nombres,
     apellidos: parsed.data.apellidos,
@@ -33,7 +46,7 @@ export async function createAdmission(
     edad: parsed.data.edad ?? null,
     sexo: parsed.data.sexo,
     procedencia: parsed.data.procedencia,
-    hospital_id: parsed.data.hospital_id,
+    hospital_id: hospitalResult.hospitalId,
     servicio_requerido: parsed.data.servicio_requerido,
     estado: parsed.data.estado,
   });
@@ -48,8 +61,14 @@ export async function createAdmission(
 
   revalidatePath("/dashboard");
 
+  const successMessage =
+    parsed.data.hospital_mode === "custom"
+      ? "Ingreso registrado correctamente. El hospital quedo disponible para futuros registros."
+      : "Ingreso registrado correctamente.";
+
   return {
     ok: true,
-    message: "Ingreso registrado correctamente.",
+    message: successMessage,
+    resetKey: Date.now(),
   };
 }

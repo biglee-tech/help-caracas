@@ -47,6 +47,13 @@ for select
 to anon
 using (true);
 
+drop policy if exists "Publico puede registrar hospitales" on hospitales;
+create policy "Publico puede registrar hospitales"
+on hospitales
+for insert
+to anon
+with check (char_length(trim(nombre)) >= 3);
+
 drop policy if exists "Personal autenticado puede consultar ingresos" on ingresos_emergencia;
 drop policy if exists "Publico puede consultar ingresos" on ingresos_emergencia;
 create policy "Publico puede consultar ingresos"

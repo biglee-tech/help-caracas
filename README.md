@@ -19,7 +19,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 3. Ejecuta el SQL de `supabase/schema.sql` en el SQL Editor de Supabase.
-4. Carga los hospitales iniciales en la tabla `hospitales`.
+4. Carga hospitales iniciales en la tabla `hospitales` o deja que cualquier
+   usuario los registre desde la opcion "Otro hospital" del formulario.
 
 ## Desarrollo
 
@@ -33,7 +34,8 @@ Abre `http://localhost:3000`.
 
 - La app permite registrar y consultar ingresos sin login.
 - Row Level Security queda habilitado para `hospitales` e
-  `ingresos_emergencia`, con policies publicas para el rol `anon`.
+  `ingresos_emergencia`, con policies publicas de lectura e insercion para el
+  rol `anon`.
 - El frontend solo usa la anon key de Supabase. No agregues `service_role` al
   proyecto Next.js.
 - Cualquier persona con la URL podra usar el sistema. Considera proteccion en
