@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
+import { ExportCsvButton } from "@/components/export-csv-button";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { EmergencyAdmission, Hospital } from "@/lib/types";
@@ -114,9 +115,12 @@ export default async function DashboardPage({
                   Filtra por paciente, procedencia, hospital o estado.
                 </p>
               </div>
-              <p className="rounded-full border border-[var(--brand-border)] bg-white px-3 py-1 text-sm font-bold text-[var(--brand-accent-strong)]">
-                {totalRegistered} registros
-              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <p className="rounded-full border border-[var(--brand-border)] bg-white px-3 py-1 text-sm font-bold text-[var(--brand-accent-strong)]">
+                  {totalRegistered} registros
+                </p>
+                <ExportCsvButton href={getExportHref(params)} />
+              </div>
             </div>
 
             <form className="mt-5 grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
@@ -293,6 +297,25 @@ function getPageHref(params: DashboardSearchParams, page: number) {
 
   const query = searchParams.toString();
   return query ? `/dashboard?${query}` : "/dashboard";
+}
+
+function getExportHref(params: DashboardSearchParams) {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) {
+    searchParams.set("q", params.q);
+  }
+
+  if (params.hospital_id) {
+    searchParams.set("hospital_id", params.hospital_id);
+  }
+
+  if (params.estado) {
+    searchParams.set("estado", params.estado);
+  }
+
+  const query = searchParams.toString();
+  return query ? `/api/export?${query}` : "/api/export";
 }
 
 function fetchHospitals(supabase: Awaited<ReturnType<typeof createClient>>) {
