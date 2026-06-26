@@ -84,7 +84,7 @@ function AdmissionFormFields({
 
       {!hasHospitals ? (
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-          Aun no hay hospitales precargados. Escribe el nombre del centro de
+          Aun no hay centros de salud precargados. Escribe el nombre del centro de
           salud donde se atiende al paciente.
         </div>
       ) : null}
@@ -151,7 +151,7 @@ function AdmissionFormFields({
           {hasHospitals ? (
             <label className="block min-w-0 space-y-2">
               <span className="text-sm font-bold text-[var(--foreground)]">
-                Hospital
+                Centro de salud
               </span>
               <select
                 className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
@@ -166,7 +166,7 @@ function AdmissionFormFields({
                 required={!isCustomHospital}
                 value={selectedHospitalId}
               >
-                <option value="">Selecciona un hospital</option>
+                <option value="">Selecciona un centro de salud</option>
                 {hospitals.map((hospital) => (
                   <option key={hospital.id} value={hospital.id}>
                     {hospital.nombre}
@@ -174,7 +174,7 @@ function AdmissionFormFields({
                   </option>
                 ))}
                 <option value={CUSTOM_HOSPITAL_VALUE}>
-                  Otro hospital (agregar manualmente)
+                  Otro centro de salud (agregar manualmente)
                 </option>
               </select>
               {fieldErrors?.hospital_id ? (
@@ -196,7 +196,7 @@ function AdmissionFormFields({
               ) : null}
               <Field
                 error={fieldErrors?.hospital_nombre}
-                label="Nombre del hospital"
+                label="Nombre del centro de salud"
                 name="hospital_nombre"
                 placeholder="Ej. Hospital General de Los Teques"
                 required

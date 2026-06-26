@@ -83,7 +83,7 @@ export default async function DashboardPage({
       <section className="border-b border-[var(--brand-border)] bg-white">
         <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7">
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-            <SummaryCard label="Hospitales reportando" value={hospitals.length} />
+            <SummaryCard label="Centros de salud reportando" value={hospitals.length} />
             <SummaryCard label="Pacientes registrados" value={totalRegistered} />
             <SummaryCard label="Actualizacion reciente" value={lastUpdatedAt} />
           </div>
@@ -94,7 +94,7 @@ export default async function DashboardPage({
         <section className="min-w-0 h-fit max-w-full rounded-3xl bg-white p-4 shadow-sm ring-1 ring-[var(--brand-border)] sm:p-5 md:p-6">
           {hospitalsError ? (
             <Alert
-              message="No pudimos cargar hospitales. Revisa Supabase y las politicas RLS."
+              message="No pudimos cargar hospitales."
               tone="error"
             />
           ) : null}
@@ -136,7 +136,7 @@ export default async function DashboardPage({
                 defaultValue={params.hospital_id ?? ""}
                 name="hospital_id"
               >
-                <option value="">Todos los hospitales</option>
+                <option value="">Todos los centros de salud</option>
                 {hospitals.map((hospital) => (
                   <option key={hospital.id} value={hospital.id}>
                     {hospital.nombre}
