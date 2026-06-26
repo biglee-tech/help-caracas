@@ -25,24 +25,36 @@ alter table hospitales enable row level security;
 alter table ingresos_emergencia enable row level security;
 
 drop policy if exists "Personal autenticado puede consultar hospitales" on hospitales;
-create policy "Personal autenticado puede consultar hospitales"
+drop policy if exists "Publico puede consultar hospitales" on hospitales;
+create policy "Publico puede consultar hospitales"
 on hospitales
 for select
-to authenticated
+to anon
 using (true);
 
 drop policy if exists "Personal autenticado puede consultar ingresos" on ingresos_emergencia;
-create policy "Personal autenticado puede consultar ingresos"
+drop policy if exists "Publico puede consultar ingresos" on ingresos_emergencia;
+create policy "Publico puede consultar ingresos"
 on ingresos_emergencia
 for select
-to authenticated
+to anon
 using (true);
 
 drop policy if exists "Personal autenticado puede registrar ingresos" on ingresos_emergencia;
-create policy "Personal autenticado puede registrar ingresos"
+drop policy if exists "Publico puede registrar ingresos" on ingresos_emergencia;
+create policy "Publico puede registrar ingresos"
 on ingresos_emergencia
 for insert
-to authenticated
+to anon
+with check (true);
+
+drop policy if exists "Personal autenticado puede actualizar estado" on ingresos_emergencia;
+drop policy if exists "Publico puede actualizar ingresos" on ingresos_emergencia;
+create policy "Publico puede actualizar ingresos"
+on ingresos_emergencia
+for update
+to anon
+using (true)
 with check (true);
 
 -- Opcional: cargar hospitales iniciales desde el panel de Supabase o con inserts como:

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { signOut } from "@/app/dashboard/actions";
 import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -31,13 +30,6 @@ export default async function DashboardPage({
 
   const params = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
 
   const [{ data: hospitalsData, error: hospitalsError }, admissionsResult] =
     await Promise.all([fetchHospitals(supabase), fetchAdmissions(supabase, params)]);
@@ -72,11 +64,6 @@ export default async function DashboardPage({
               </h1>
             </div>
           </div>
-          <form action={signOut} className="w-full md:w-auto">
-            <button className="w-full rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25 sm:w-auto">
-              Cerrar sesion
-            </button>
-          </form>
         </div>
       </header>
 

@@ -1,22 +1,13 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 
-import { LoginForm } from "@/components/login-form";
 import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      redirect("/dashboard");
-    }
+    redirect("/dashboard");
   }
 
   return (
@@ -49,35 +40,31 @@ export default async function LoginPage() {
       <section className="mx-auto flex w-full max-w-md flex-col px-4 py-8 sm:py-10">
         <div className="mb-6 text-center">
           <h2 className="text-xl font-black tracking-tight text-[var(--foreground)] sm:text-2xl">
-            Acceso al sistema
+            Configuracion requerida
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
-            Ingresa con una cuenta autorizada por el equipo.
+            Agrega las variables de Supabase para habilitar el sistema publico.
           </p>
         </div>
 
         <aside className="rounded-3xl bg-white p-5 shadow-lg shadow-[rgba(22,63,82,0.12)] ring-1 ring-[var(--brand-border)] sm:p-6 md:p-7">
           <div className="mb-6">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)] sm:text-sm">
-              Personal autorizado
+              Supabase
             </p>
             <h3 className="mt-3 text-xl font-black text-[var(--foreground)] sm:text-2xl">
-              Iniciar sesion
+              Variables faltantes
             </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
-              Usa las credenciales creadas para el equipo de apoyo.
+              Define la URL y anon key del proyecto para continuar.
             </p>
           </div>
 
-          {isSupabaseConfigured() ? (
-            <LoginForm />
-          ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-              Configura `NEXT_PUBLIC_SUPABASE_URL` y
-              `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local` para habilitar el
-              acceso.
-            </div>
-          )}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            Configura `NEXT_PUBLIC_SUPABASE_URL` y
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local` para habilitar el
+            acceso.
+          </div>
         </aside>
       </section>
     </main>

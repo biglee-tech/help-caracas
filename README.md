@@ -7,7 +7,6 @@ emergencia por terremoto en Venezuela.
 
 - Node.js compatible con Next.js.
 - Proyecto Supabase activo.
-- Usuarios creados en Supabase Auth para el personal autorizado.
 
 ## Configuracion
 
@@ -20,8 +19,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 3. Ejecuta el SQL de `supabase/schema.sql` en el SQL Editor de Supabase.
-4. Crea o invita usuarios autorizados en Supabase Auth.
-5. Carga los hospitales iniciales en la tabla `hospitales`.
+4. Carga los hospitales iniciales en la tabla `hospitales`.
 
 ## Desarrollo
 
@@ -33,8 +31,10 @@ Abre `http://localhost:3000`.
 
 ## Seguridad
 
-- La app usa Supabase Auth para restringir acceso al dashboard.
+- La app permite registrar, consultar y actualizar estados sin login.
 - Row Level Security queda habilitado para `hospitales` e
-  `ingresos_emergencia`.
+  `ingresos_emergencia`, con policies publicas para el rol `anon`.
 - El frontend solo usa la anon key de Supabase. No agregues `service_role` al
   proyecto Next.js.
+- Cualquier persona con la URL podra usar el sistema. Considera proteccion en
+  Vercel, captcha o rate limiting si lo expones publicamente.

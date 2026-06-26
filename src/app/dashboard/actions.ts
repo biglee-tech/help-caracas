@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import type { AdmissionActionState } from "@/lib/types";
 import {
@@ -17,16 +16,6 @@ export async function createAdmission(
   formData: FormData,
 ): Promise<AdmissionActionState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      ok: false,
-      message: "Tu sesion expiro. Inicia sesion nuevamente.",
-    };
-  }
 
   const parsed = admissionSchema.safeParse(formDataToAdmissionInput(formData));
 
@@ -66,13 +55,6 @@ export async function createAdmission(
 
 export async function updateAdmissionStatus(formData: FormData) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
 
   const id = Number(formData.get("id"));
   const parsedStatus = admissionStatusSchema.safeParse(formData.get("estado"));
@@ -88,10 +70,4 @@ export async function updateAdmissionStatus(formData: FormData) {
     .eq("id", id);
 
   revalidatePath("/dashboard");
-}
-
-export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
 }
