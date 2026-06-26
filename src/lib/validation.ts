@@ -33,6 +33,7 @@ export const admissionStatuses = [
   "En atencion",
   "Referido",
   "Atendido",
+  "Fallecido",
 ] as const;
 
 export const admissionStatusSchema = z.enum(admissionStatuses);

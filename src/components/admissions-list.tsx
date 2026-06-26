@@ -94,6 +94,8 @@ function StatusTag({ status }: { status: string }) {
 
 function getStatusClassName(status: string) {
   switch (status) {
+    case "Fallecido":
+      return "border-red-200 bg-red-50 text-red-700";
     case "Atendido":
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
     case "En atencion":
