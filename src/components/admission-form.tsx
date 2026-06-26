@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { createAdmission } from "@/app/dashboard/actions";
 import { SubmitButton } from "@/components/submit-button";
 import type { AdmissionActionState, Hospital } from "@/lib/types";
-import { admissionStatuses } from "@/lib/validation";
+import { admissionStatuses, sexOptions } from "@/lib/validation";
 
 const initialState: AdmissionActionState = {
   ok: false,
@@ -82,6 +82,27 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
           name="cedula"
           placeholder="Ej. V-12345678"
         />
+        <label className="block min-w-0 space-y-2">
+          <span className="text-sm font-bold text-[var(--foreground)]">
+            Sexo
+          </span>
+          <select
+            className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+            name="sexo"
+            required
+          >
+            {sexOptions.map((sexo) => (
+              <option key={sexo} value={sexo}>
+                {sexo}
+              </option>
+            ))}
+          </select>
+          {state.fieldErrors?.sexo ? (
+            <span className="text-xs font-medium text-rose-700">
+              {state.fieldErrors.sexo}
+            </span>
+          ) : null}
+        </label>
         <Field
           error={state.fieldErrors?.procedencia}
           label="Procedencia"

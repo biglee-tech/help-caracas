@@ -23,10 +23,19 @@ export const admissionStatuses = [
 
 export const admissionStatusSchema = z.enum(admissionStatuses);
 
+export const sexOptions = [
+  "Masculino",
+  "Femenino",
+  "No especificado",
+] as const;
+
+export const sexSchema = z.enum(sexOptions);
+
 export const admissionSchema = z.object({
   nombres: requiredText("Nombres"),
   apellidos: requiredText("Apellidos"),
   cedula: optionalText,
+  sexo: sexSchema,
   procedencia: optionalText,
   hospital_id: z.coerce
     .number({ error: "Selecciona un hospital" })
@@ -43,6 +52,7 @@ export function formDataToAdmissionInput(formData: FormData) {
     nombres: formData.get("nombres"),
     apellidos: formData.get("apellidos"),
     cedula: formData.get("cedula"),
+    sexo: formData.get("sexo"),
     procedencia: formData.get("procedencia"),
     hospital_id: formData.get("hospital_id"),
     servicio_requerido: formData.get("servicio_requerido"),

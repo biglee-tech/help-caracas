@@ -31,8 +31,15 @@ export default async function DashboardPage({
   const params = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: hospitalsData, error: hospitalsError }, admissionsResult] =
-    await Promise.all([fetchHospitals(supabase), fetchAdmissions(supabase, params)]);
+  const [
+    { data: hospitalsData, error: hospitalsError },
+    admissionsResult,
+    { data: latestAdmission },
+  ] = await Promise.all([
+    fetchHospitals(supabase),
+    fetchAdmissions(supabase, params),
+    fetchLatestAdmission(supabase),
+  ]);
 
   const hospitals = (hospitalsData ?? []) as Hospital[];
   const admissions = normalizeAdmissions(admissionsResult.data ?? []);
@@ -41,7 +48,9 @@ export default async function DashboardPage({
   const totalPages = Math.max(1, Math.ceil(totalAdmissions / PAGE_SIZE));
   const visibleFrom = totalAdmissions === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const visibleTo = Math.min(currentPage * PAGE_SIZE, totalAdmissions);
-  const lastUpdatedAt = formatSummaryDate(new Date());
+  const lastUpdatedAt = latestAdmission?.fecha_ingreso
+    ? formatSummaryDate(new Date(latestAdmission.fecha_ingreso))
+    : "Sin registros";
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[var(--background)]">
@@ -290,6 +299,15 @@ function fetchHospitals(supabase: Awaited<ReturnType<typeof createClient>>) {
     .order("nombre", { ascending: true });
 }
 
+function fetchLatestAdmission(supabase: Awaited<ReturnType<typeof createClient>>) {
+  return supabase
+    .from("ingresos_emergencia")
+    .select("fecha_ingreso")
+    .order("fecha_ingreso", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
 function fetchAdmissions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   params: DashboardSearchParams,
@@ -301,7 +319,7 @@ function fetchAdmissions(
   let query = supabase
     .from("ingresos_emergencia")
     .select(
-      "id,nombres,apellidos,cedula,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
+      "id,nombres,apellidos,cedula,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       { count: "exact" },
     )
     .order("fecha_ingreso", { ascending: false })
@@ -323,6 +341,7 @@ function fetchAdmissions(
         `nombres.ilike.%${searchTerm}%`,
         `apellidos.ilike.%${searchTerm}%`,
         `cedula.ilike.%${searchTerm}%`,
+        `sexo.ilike.%${searchTerm}%`,
         `procedencia.ilike.%${searchTerm}%`,
         `servicio_requerido.ilike.%${searchTerm}%`,
       ].join(","),

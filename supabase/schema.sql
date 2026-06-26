@@ -13,6 +13,7 @@ create table if not exists ingresos_emergencia (
   nombres text not null,
   apellidos text not null,
   cedula text,
+  sexo text not null default 'No especificado'::text,
   procedencia text,
   hospital_id bigint references hospitales(id) on delete restrict not null,
   fecha_ingreso timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -20,6 +21,9 @@ create table if not exists ingresos_emergencia (
   estado text default 'Pendiente'::text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table ingresos_emergencia
+add column if not exists sexo text not null default 'No especificado'::text;
 
 alter table hospitales enable row level security;
 alter table ingresos_emergencia enable row level security;
