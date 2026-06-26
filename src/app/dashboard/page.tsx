@@ -52,8 +52,8 @@ export default async function DashboardPage({
   const totalPages = Math.max(1, Math.ceil(totalAdmissions / PAGE_SIZE));
   const visibleFrom = totalAdmissions === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const visibleTo = Math.min(currentPage * PAGE_SIZE, totalAdmissions);
-  const lastUpdatedAt = latestAdmission?.fecha_ingreso
-    ? formatSummaryDate(new Date(latestAdmission.fecha_ingreso))
+  const lastUpdatedAt = latestAdmission?.created_at
+    ? formatSummaryDate(new Date(latestAdmission.created_at))
     : "Sin registros";
 
   return (
@@ -328,8 +328,8 @@ function fetchHospitals(supabase: Awaited<ReturnType<typeof createClient>>) {
 function fetchLatestAdmission(supabase: Awaited<ReturnType<typeof createClient>>) {
   return supabase
     .from("ingresos_emergencia")
-    .select("fecha_ingreso")
-    .order("fecha_ingreso", { ascending: false })
+    .select("created_at")
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 }
@@ -354,7 +354,7 @@ function fetchAdmissions(
       "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       { count: "exact" },
     )
-    .order("fecha_ingreso", { ascending: false })
+    .order("created_at", { ascending: false })
     .range(from, to);
 
   const hospitalId = Number(params.hospital_id);
