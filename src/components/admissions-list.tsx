@@ -1,4 +1,5 @@
 import type { EmergencyAdmission } from "@/lib/types";
+import { formatAdmissionDate } from "@/lib/dates";
 
 type AdmissionsListProps = {
   admissions: EmergencyAdmission[];
@@ -45,7 +46,7 @@ export function AdmissionsList({ admissions }: AdmissionsListProps) {
                 className="block text-sm font-semibold text-[var(--brand-muted)]"
                 dateTime={admission.fecha_ingreso}
               >
-                {formatDate(admission.fecha_ingreso)}
+                {formatAdmissionDate(admission.fecha_ingreso)}
               </time>
             </div>
           </div>
@@ -108,10 +109,3 @@ function getStatusClassName(status: string) {
   }
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-VE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "America/Caracas",
-  }).format(new Date(value));
-}

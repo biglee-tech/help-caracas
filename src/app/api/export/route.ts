@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { Hospital } from "@/lib/types";
@@ -58,6 +59,7 @@ async function fetchAdmissionsForExport(
         "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
       )
       .order("fecha_ingreso", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, from + CHUNK_SIZE - 1);
 
     const hospitalId = Number(params.get("hospital_id"));
@@ -133,10 +135,10 @@ function toCsv(rows: ExportAdmission[]) {
       row.procedencia ?? "",
       hospital?.nombre ?? "",
       hospital?.ciudad ?? "",
-      formatDate(row.fecha_ingreso),
+      formatAdmissionDate(row.fecha_ingreso),
       row.servicio_requerido,
       row.estado ?? "",
-      formatDate(row.created_at),
+      formatAdmissionDate(row.created_at),
     ].map(escapeCsvValue);
   });
 
@@ -157,14 +159,6 @@ function escapeCsvValue(value: string | number) {
   }
 
   return text;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-VE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "America/Caracas",
-  }).format(new Date(value));
 }
 
 function normalizeSearchTerm(value?: string) {

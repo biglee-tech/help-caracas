@@ -7,12 +7,15 @@ const requiredText = (label: string) =>
     .min(1, `${label} es obligatorio`)
     .max(160, `${label} es demasiado largo`);
 
-const optionalText = z
-  .string()
-  .trim()
-  .max(160, "El texto es demasiado largo")
-  .optional()
-  .transform((value) => (value ? value : null));
+const optionalText = z.preprocess(
+  (value) => (value === null || value === "" ? undefined : value),
+  z
+    .string()
+    .trim()
+    .max(160, "El texto es demasiado largo")
+    .optional()
+    .transform((value) => value ?? null),
+);
 
 const optionalAge = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
