@@ -35,15 +35,18 @@ export default async function DashboardPage({
     { data: hospitalsData, error: hospitalsError },
     admissionsResult,
     { data: latestAdmission },
+    totalAdmissionsResult,
   ] = await Promise.all([
     fetchHospitals(supabase),
     fetchAdmissions(supabase, params),
     fetchLatestAdmission(supabase),
+    fetchTotalAdmissions(supabase),
   ]);
 
   const hospitals = (hospitalsData ?? []) as Hospital[];
   const admissions = normalizeAdmissions(admissionsResult.data ?? []);
   const totalAdmissions = admissionsResult.count ?? 0;
+  const totalRegistered = totalAdmissionsResult.count ?? totalAdmissions;
   const currentPage = getCurrentPage(params.page);
   const totalPages = Math.max(1, Math.ceil(totalAdmissions / PAGE_SIZE));
   const visibleFrom = totalAdmissions === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
@@ -80,7 +83,7 @@ export default async function DashboardPage({
         <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7">
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <SummaryCard label="Hospitales reportando" value={hospitals.length} />
-            <SummaryCard label="Pacientes registrados" value={totalAdmissions} />
+            <SummaryCard label="Pacientes registrados" value={totalRegistered} />
             <SummaryCard label="Actualizacion reciente" value={lastUpdatedAt} />
           </div>
         </div>
@@ -112,7 +115,7 @@ export default async function DashboardPage({
                 </p>
               </div>
               <p className="rounded-full border border-[var(--brand-border)] bg-white px-3 py-1 text-sm font-bold text-[var(--brand-accent-strong)]">
-                {totalAdmissions} registros
+                {totalRegistered} registros
               </p>
             </div>
 
@@ -306,6 +309,12 @@ function fetchLatestAdmission(supabase: Awaited<ReturnType<typeof createClient>>
     .order("fecha_ingreso", { ascending: false })
     .limit(1)
     .maybeSingle();
+}
+
+function fetchTotalAdmissions(supabase: Awaited<ReturnType<typeof createClient>>) {
+  return supabase
+    .from("ingresos_emergencia")
+    .select("id", { count: "exact", head: true });
 }
 
 function fetchAdmissions(
