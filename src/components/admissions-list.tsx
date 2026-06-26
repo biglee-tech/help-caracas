@@ -110,5 +110,6 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-VE", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "America/Caracas",
   }).format(new Date(value));
 }

@@ -202,6 +202,7 @@ function formatSummaryDate(value: Date) {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "America/Caracas",
   }).format(value);
 }
 
