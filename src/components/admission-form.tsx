@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useState } from "react";
 
 import { createAdmission } from "@/app/dashboard/actions";
 import { SubmitButton } from "@/components/submit-button";
 import type { AdmissionActionState, Hospital } from "@/lib/types";
-import { admissionStatuses, sexOptions } from "@/lib/validation";
+import {
+  CUSTOM_HOSPITAL_VALUE,
+  admissionStatuses,
+  sexOptions,
+} from "@/lib/validation";
 
 const initialState: AdmissionActionState = {
   ok: false,
@@ -17,30 +21,10 @@ type AdmissionFormProps = {
 };
 
 export function AdmissionForm({ hospitals }: AdmissionFormProps) {
-  const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useActionState(createAdmission, initialState);
-  const hasHospitals = hospitals.length > 0;
-
-  useEffect(() => {
-    if (state.ok) {
-      formRef.current?.reset();
-    }
-  }, [state.ok]);
 
   return (
-    <form ref={formRef} action={formAction} className="min-w-0 max-w-full space-y-5">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
-          Nuevo registro
-        </p>
-        <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
-          Registrar ingreso
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-[var(--brand-muted)]">
-          Completa los datos esenciales del paciente y el servicio requerido.
-        </p>
-      </div>
-
+    <div className="min-w-0 max-w-full space-y-5">
       {state.message ? (
         <div
           className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
@@ -54,36 +38,80 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
         </div>
       ) : null}
 
+      <AdmissionFormFields
+        fieldErrors={state.ok ? undefined : state.fieldErrors}
+        formAction={formAction}
+        hospitals={hospitals}
+        key={state.resetKey ?? 0}
+      />
+    </div>
+  );
+}
+
+type AdmissionFormFieldsProps = {
+  hospitals: Hospital[];
+  formAction: React.ComponentProps<"form">["action"];
+  fieldErrors?: Record<string, string | null>;
+};
+
+function AdmissionFormFields({
+  hospitals,
+  formAction,
+  fieldErrors,
+}: AdmissionFormFieldsProps) {
+  const hasHospitals = hospitals.length > 0;
+  const [hospitalMode, setHospitalMode] = useState<"existing" | "custom">(() =>
+    hasHospitals ? "existing" : "custom",
+  );
+  const [selectedHospitalId, setSelectedHospitalId] = useState("");
+  const isCustomHospital = hospitalMode === "custom";
+
+  return (
+    <form action={formAction} className="min-w-0 max-w-full space-y-5">
+      <input name="hospital_mode" type="hidden" value={hospitalMode} />
+
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
+          Nuevo registro
+        </p>
+        <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
+          Registrar ingreso
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--brand-muted)]">
+          Completa los datos esenciales del paciente y el servicio requerido.
+        </p>
+      </div>
+
       {!hasHospitals ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Aun no hay hospitales cargados. Agrega hospitales en Supabase antes
-          de registrar ingresos.
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          Aun no hay hospitales precargados. Escribe el nombre del centro de
+          salud donde se atiende al paciente.
         </div>
       ) : null}
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <Field
-          error={state.fieldErrors?.nombres}
+          error={fieldErrors?.nombres}
           label="Nombres"
           name="nombres"
           placeholder="Ej. Maria Elena"
           required
         />
         <Field
-          error={state.fieldErrors?.apellidos}
+          error={fieldErrors?.apellidos}
           label="Apellidos"
           name="apellidos"
           placeholder="Ej. Perez Diaz"
           required
         />
         <Field
-          error={state.fieldErrors?.cedula}
+          error={fieldErrors?.cedula}
           label="Cedula"
           name="cedula"
           placeholder="Ej. V-12345678"
         />
         <Field
-          error={state.fieldErrors?.edad}
+          error={fieldErrors?.edad}
           label="Edad"
           name="edad"
           placeholder="Ej. 35"
@@ -104,14 +132,14 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
               </option>
             ))}
           </select>
-          {state.fieldErrors?.sexo ? (
+          {fieldErrors?.sexo ? (
             <span className="text-xs font-medium text-rose-700">
-              {state.fieldErrors.sexo}
+              {fieldErrors.sexo}
             </span>
           ) : null}
         </label>
         <Field
-          error={state.fieldErrors?.procedencia}
+          error={fieldErrors?.procedencia}
           label="Procedencia"
           name="procedencia"
           placeholder="Sector, municipio o refugio"
@@ -119,30 +147,75 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
       </div>
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-        <label className="block min-w-0 space-y-2">
-          <span className="text-sm font-bold text-[var(--foreground)]">
-            Hospital
-          </span>
-          <select
-            className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
-            disabled={!hasHospitals}
-            name="hospital_id"
-            required
-          >
-            <option value="">Selecciona un hospital</option>
-            {hospitals.map((hospital) => (
-              <option key={hospital.id} value={hospital.id}>
-                {hospital.nombre}
-                {hospital.ciudad ? ` - ${hospital.ciudad}` : ""}
-              </option>
-            ))}
-          </select>
-          {state.fieldErrors?.hospital_id ? (
-            <span className="text-xs font-medium text-rose-700">
-              {state.fieldErrors.hospital_id}
-            </span>
+        <div className="min-w-0 space-y-4 sm:col-span-2">
+          {hasHospitals ? (
+            <label className="block min-w-0 space-y-2">
+              <span className="text-sm font-bold text-[var(--foreground)]">
+                Hospital
+              </span>
+              <select
+                className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+                name="hospital_id"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSelectedHospitalId(value);
+                  setHospitalMode(
+                    value === CUSTOM_HOSPITAL_VALUE ? "custom" : "existing",
+                  );
+                }}
+                required={!isCustomHospital}
+                value={selectedHospitalId}
+              >
+                <option value="">Selecciona un hospital</option>
+                {hospitals.map((hospital) => (
+                  <option key={hospital.id} value={hospital.id}>
+                    {hospital.nombre}
+                    {hospital.ciudad ? ` - ${hospital.ciudad}` : ""}
+                  </option>
+                ))}
+                <option value={CUSTOM_HOSPITAL_VALUE}>
+                  Otro hospital (agregar manualmente)
+                </option>
+              </select>
+              {fieldErrors?.hospital_id ? (
+                <span className="text-xs font-medium text-rose-700">
+                  {fieldErrors.hospital_id}
+                </span>
+              ) : null}
+            </label>
           ) : null}
-        </label>
+
+          {isCustomHospital ? (
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              {!hasHospitals ? (
+                <input
+                  name="hospital_id"
+                  type="hidden"
+                  value={CUSTOM_HOSPITAL_VALUE}
+                />
+              ) : null}
+              <Field
+                error={fieldErrors?.hospital_nombre}
+                label="Nombre del hospital"
+                name="hospital_nombre"
+                placeholder="Ej. Hospital General de Los Teques"
+                required
+              />
+              <Field
+                error={fieldErrors?.hospital_ciudad}
+                label="Ciudad (opcional)"
+                name="hospital_ciudad"
+                placeholder="Ej. Miranda"
+              />
+              {hasHospitals ? (
+                <p className="sm:col-span-2 text-sm text-[var(--brand-muted)]">
+                  Usa esta opcion solo si el centro de salud no aparece en la
+                  lista.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         <label className="block min-w-0 space-y-2">
           <span className="text-sm font-bold text-[var(--foreground)]">
@@ -171,9 +244,9 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
           placeholder="Ej. Traumatologia, cirugia, evaluacion respiratoria"
           required
         />
-        {state.fieldErrors?.servicio_requerido ? (
+        {fieldErrors?.servicio_requerido ? (
           <span className="text-xs font-medium text-rose-700">
-            {state.fieldErrors.servicio_requerido}
+            {fieldErrors.servicio_requerido}
           </span>
         ) : null}
       </label>

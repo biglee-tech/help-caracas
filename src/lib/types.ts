@@ -24,4 +24,5 @@ export type AdmissionActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string | null>;
+  resetKey?: number;
 };
