@@ -3,13 +3,23 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveHospitalId } from "@/lib/hospitals";
+import { normalizeAdmissionNames } from "@/lib/merge-rules";
+import { formatCedulaForDisplay } from "@/lib/person-normalize";
+import {
+  findSimilarAdmissions,
+  toSimilarMatchSummary,
+} from "@/lib/similar-admissions";
+import { createClient } from "@/lib/supabase/server";
 import type { AdmissionActionState } from "@/lib/types";
 import {
   admissionSchema,
   formDataToAdmissionInput,
   getFieldErrors,
 } from "@/lib/validation";
-import { createClient } from "@/lib/supabase/server";
+
+function readFormFlag(formData: FormData, key: string) {
+  return formData.get(key) === "1";
+}
 
 export async function createAdmission(
   _previousState: AdmissionActionState,
@@ -39,10 +49,35 @@ export async function createAdmission(
     };
   }
 
+  const confirmNotDuplicate = readFormFlag(formData, "confirm_not_duplicate");
+
+  if (!confirmNotDuplicate) {
+    const similarMatches = await findSimilarAdmissions(supabase, {
+      nombres: parsed.data.nombres,
+      apellidos: parsed.data.apellidos,
+      cedula: parsed.data.cedula,
+      edad: parsed.data.edad ?? null,
+      sexo: parsed.data.sexo,
+      hospital_id: hospitalResult.hospitalId,
+    });
+
+    if (similarMatches.length > 0) {
+      return {
+        ok: false,
+        message:
+          "Encontramos ingresos similares. Revisa la lista antes de crear otro registro.",
+        needsConfirmation: true,
+        similarMatches: similarMatches.map(toSimilarMatchSummary),
+      };
+    }
+  }
+
+  const normalizedNames = normalizeAdmissionNames(parsed.data);
+
   const { error } = await supabase.from("ingresos_emergencia").insert({
-    nombres: parsed.data.nombres,
-    apellidos: parsed.data.apellidos,
-    cedula: parsed.data.cedula,
+    nombres: normalizedNames.nombres,
+    apellidos: normalizedNames.apellidos,
+    cedula: formatCedulaForDisplay(parsed.data.cedula),
     edad: parsed.data.edad ?? null,
     sexo: parsed.data.sexo,
     procedencia: parsed.data.procedencia,
