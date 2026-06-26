@@ -19,20 +19,7 @@ export async function resolveHospitalId(
       };
     }
 
-    const { data: hospital, error } = await supabase
-      .from("hospitales")
-      .select("id")
-      .eq("id", data.hospital_id)
-      .maybeSingle();
-
-    if (error || !hospital) {
-      return {
-        error: "El hospital seleccionado no es valido.",
-        field: "hospital_id",
-      };
-    }
-
-    return { hospitalId: hospital.id };
+    return { hospitalId: data.hospital_id };
   }
 
   const nombre = normalizeHospitalName(data.hospital_nombre ?? "");

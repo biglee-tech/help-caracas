@@ -101,9 +101,12 @@ export function normalizeHospitalName(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+export function resolveHospitalMode(hospitalId: FormDataEntryValue | null) {
+  return hospitalId === CUSTOM_HOSPITAL_VALUE ? "custom" : "existing";
+}
+
 export function formDataToAdmissionInput(formData: FormData) {
   const hospitalId = formData.get("hospital_id");
-  const hospitalMode = formData.get("hospital_mode");
 
   return {
     nombres: formData.get("nombres"),
@@ -112,10 +115,7 @@ export function formDataToAdmissionInput(formData: FormData) {
     edad: formData.get("edad"),
     sexo: formData.get("sexo"),
     procedencia: formData.get("procedencia"),
-    hospital_mode:
-      hospitalMode === "custom" || hospitalId === CUSTOM_HOSPITAL_VALUE
-        ? "custom"
-        : "existing",
+    hospital_mode: resolveHospitalMode(hospitalId),
     hospital_id: hospitalId,
     hospital_nombre: formData.get("hospital_nombre"),
     hospital_ciudad: formData.get("hospital_ciudad"),

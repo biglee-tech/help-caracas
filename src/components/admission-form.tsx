@@ -60,15 +60,14 @@ function AdmissionFormFields({
   fieldErrors,
 }: AdmissionFormFieldsProps) {
   const hasHospitals = hospitals.length > 0;
-  const [hospitalMode, setHospitalMode] = useState<"existing" | "custom">(() =>
-    hasHospitals ? "existing" : "custom",
+  const [selectedHospitalId, setSelectedHospitalId] = useState(
+    hasHospitals ? "" : CUSTOM_HOSPITAL_VALUE,
   );
-  const [selectedHospitalId, setSelectedHospitalId] = useState("");
-  const isCustomHospital = hospitalMode === "custom";
+  const isCustomHospital =
+    !hasHospitals || selectedHospitalId === CUSTOM_HOSPITAL_VALUE;
 
   return (
     <form action={formAction} className="min-w-0 max-w-full space-y-5">
-      <input name="hospital_mode" type="hidden" value={hospitalMode} />
 
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
@@ -155,16 +154,12 @@ function AdmissionFormFields({
               </span>
               <select
                 className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+                defaultValue=""
                 name="hospital_id"
                 onChange={(event) => {
-                  const value = event.target.value;
-                  setSelectedHospitalId(value);
-                  setHospitalMode(
-                    value === CUSTOM_HOSPITAL_VALUE ? "custom" : "existing",
-                  );
+                  setSelectedHospitalId(event.target.value);
                 }}
                 required={!isCustomHospital}
-                value={selectedHospitalId}
               >
                 <option value="">Selecciona un hospital</option>
                 {hospitals.map((hospital) => (
