@@ -90,6 +90,7 @@ function AdmissionFormFields({
 }: AdmissionFormFieldsProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const confirmNotDuplicateRef = useRef<HTMLInputElement>(null);
+  const useExistingIdRef = useRef<HTMLInputElement>(null);
   const hasHospitals = hospitals.length > 0;
   const [selectedHospitalId, setSelectedHospitalId] = useState(
     hasHospitals ? "" : CUSTOM_HOSPITAL_VALUE,
@@ -100,6 +101,7 @@ function AdmissionFormFields({
   const [edad, setEdad] = useState("");
   const [sexo, setSexo] = useState<string>(sexOptions[0]);
   const [liveMatches, setLiveMatches] = useState<SimilarMatchSummary[]>([]);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [dismissedConfirmationId, setDismissedConfirmationId] = useState<
     string | null
   >(null);
@@ -110,6 +112,8 @@ function AdmissionFormFields({
   const isConfirming =
     confirmationBatchId.length > 0 &&
     dismissedConfirmationId !== confirmationBatchId;
+  const resolvedSelectedMatchId =
+    selectedMatchId ?? confirmationMatches?.[0]?.id ?? null;
 
   function clearLiveMatchesIfNeeded(nextNombres: string, nextApellidos: string) {
     if (nextNombres.trim().length < 2 && nextApellidos.trim().length < 2) {
@@ -192,6 +196,22 @@ function AdmissionFormFields({
       confirmNotDuplicateRef.current.value = "1";
     }
 
+    if (useExistingIdRef.current) {
+      useExistingIdRef.current.value = "";
+    }
+
+    formRef.current?.requestSubmit();
+  }
+
+  function submitCompleteExisting() {
+    if (confirmNotDuplicateRef.current) {
+      confirmNotDuplicateRef.current.value = "";
+    }
+
+    if (useExistingIdRef.current && resolvedSelectedMatchId) {
+      useExistingIdRef.current.value = String(resolvedSelectedMatchId);
+    }
+
     formRef.current?.requestSubmit();
   }
 
@@ -203,6 +223,7 @@ function AdmissionFormFields({
   return (
     <form action={formAction} className="min-w-0 max-w-full space-y-5" ref={formRef}>
       <input name="confirm_not_duplicate" ref={confirmNotDuplicateRef} type="hidden" value="" />
+      <input name="use_existing_id" ref={useExistingIdRef} type="hidden" value="" />
 
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
@@ -405,11 +426,24 @@ function AdmissionFormFields({
 
       {isConfirming && confirmationMatches ? (
         <>
-          <SimilarMatchesPanel matches={confirmationMatches} mode="confirm" />
+          <SimilarMatchesPanel
+            matches={confirmationMatches}
+            mode="confirm"
+            onSelect={setSelectedMatchId}
+            selectedId={resolvedSelectedMatchId ?? undefined}
+          />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
-              className="rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)]"
+              className="rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)]"
+              disabled={!resolvedSelectedMatchId}
+              onClick={submitCompleteExisting}
+              type="button"
+            >
+              Completar registro existente
+            </button>
+            <button
+              className="rounded-2xl border border-[var(--brand-border)] bg-white px-5 py-3 font-bold text-[var(--foreground)] transition hover:bg-[var(--background)]"
               onClick={acknowledgeExistingRegistration}
               type="button"
             >

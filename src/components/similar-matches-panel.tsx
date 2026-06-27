@@ -6,9 +6,16 @@ import type { SimilarMatchSummary } from "@/lib/types";
 type SimilarMatchesPanelProps = {
   matches: SimilarMatchSummary[];
   mode: "live" | "confirm";
+  selectedId?: number;
+  onSelect?: (id: number) => void;
 };
 
-export function SimilarMatchesPanel({ matches, mode }: SimilarMatchesPanelProps) {
+export function SimilarMatchesPanel({
+  matches,
+  mode,
+  selectedId,
+  onSelect,
+}: SimilarMatchesPanelProps) {
   if (matches.length === 0) {
     return null;
   }
@@ -31,7 +38,7 @@ export function SimilarMatchesPanel({ matches, mode }: SimilarMatchesPanelProps)
       </p>
       <p className="mt-1 text-sm leading-6 text-amber-900">
         {isConfirm
-          ? "Si ya aparece abajo, no hace falta crear otro ingreso. Solo registra de nuevo si es otra persona distinta."
+          ? "Si tenes mas datos (cedula, edad, procedencia), selecciona el registro y usa Completar registro existente. Solo se llenan campos vacios."
           : "Hay ingresos similares en las ultimas horas. Revisa antes de guardar."}
       </p>
 
@@ -41,7 +48,20 @@ export function SimilarMatchesPanel({ matches, mode }: SimilarMatchesPanelProps)
             className="rounded-2xl border border-amber-200 bg-white px-4 py-3"
             key={match.id}
           >
-            <SimilarMatchDetails match={match} />
+            {isConfirm && onSelect ? (
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  checked={selectedId === match.id}
+                  className="mt-1 h-4 w-4 accent-[var(--brand-primary)]"
+                  name="selected_similar_match"
+                  onChange={() => onSelect(match.id)}
+                  type="radio"
+                />
+                <SimilarMatchDetails match={match} />
+              </label>
+            ) : (
+              <SimilarMatchDetails match={match} />
+            )}
           </li>
         ))}
       </ul>

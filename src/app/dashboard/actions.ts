@@ -3,14 +3,19 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveHospitalId } from "@/lib/hospitals";
-import { normalizeAdmissionNames } from "@/lib/merge-rules";
+import {
+  buildFillEmptyUpdates,
+  formatFilledFieldsSummary,
+  normalizeAdmissionNames,
+  recordAllowsPublicUpdate,
+} from "@/lib/merge-rules";
 import { formatCedulaForDisplay } from "@/lib/person-normalize";
 import {
   findSimilarAdmissions,
   toSimilarMatchSummary,
 } from "@/lib/similar-admissions";
 import { createClient } from "@/lib/supabase/server";
-import type { AdmissionActionState } from "@/lib/types";
+import type { AdmissionActionState, EmergencyAdmission } from "@/lib/types";
 import {
   admissionSchema,
   formDataToAdmissionInput,
@@ -19,6 +24,113 @@ import {
 
 function readFormFlag(formData: FormData, key: string) {
   return formData.get(key) === "1";
+}
+
+function readExistingAdmissionId(formData: FormData) {
+  const value = Number(formData.get("use_existing_id"));
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function normalizeAdmissionRow(data: unknown): EmergencyAdmission | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const admission = data as EmergencyAdmission & {
+    hospitales?: EmergencyAdmission["hospitales"] | EmergencyAdmission["hospitales"][];
+  };
+  const hospital = Array.isArray(admission.hospitales)
+    ? admission.hospitales[0]
+    : admission.hospitales;
+
+  return {
+    ...admission,
+    hospitales: hospital ?? null,
+  };
+}
+
+async function completarVaciosExistente(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  existingId: number,
+  admissionInput: ReturnType<typeof admissionSchema.parse>,
+) {
+  const { data, error: fetchError } = await supabase
+    .from("ingresos_emergencia")
+    .select(
+      "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
+    )
+    .eq("id", existingId)
+    .maybeSingle();
+
+  if (fetchError || !data) {
+    return {
+      ok: false as const,
+      message: "No encontramos el registro existente seleccionado.",
+    };
+  }
+
+  const existing = normalizeAdmissionRow(data);
+
+  if (!existing) {
+    return {
+      ok: false as const,
+      message: "No encontramos el registro existente seleccionado.",
+    };
+  }
+
+  const { updates, filledFields } = buildFillEmptyUpdates(existing, admissionInput);
+
+  if (Object.keys(updates).length === 0) {
+    revalidatePath("/dashboard");
+    return {
+      ok: true as const,
+      message: `Esta persona ya estaba registrada (#${existingId}). No habia datos nuevos por agregar.`,
+      resetKey: Date.now(),
+    };
+  }
+
+  if (!recordAllowsPublicUpdate(existing)) {
+    return {
+      ok: false as const,
+      message:
+        "Este registro ya tiene cedula, edad y procedencia completos. No se pueden agregar mas datos a ese ingreso.",
+    };
+  }
+
+  const payload: Record<string, unknown> = { ...updates };
+
+  if (updates.cedula !== undefined) {
+    payload.cedula = formatCedulaForDisplay(updates.cedula);
+  }
+
+  const { error: updateError } = await supabase
+    .from("ingresos_emergencia")
+    .update(payload)
+    .eq("id", existingId);
+
+  if (updateError) {
+    console.error("completarVaciosExistente failed", {
+      existingId,
+      filledFields,
+      error: updateError.message,
+    });
+
+    return {
+      ok: false as const,
+      message:
+        "No pudimos completar el registro existente. Revisa que el ingreso tenga algun dato vacio (cedula, edad o procedencia).",
+    };
+  }
+
+  revalidatePath("/dashboard");
+
+  const filledSummary = formatFilledFieldsSummary(filledFields);
+
+  return {
+    ok: true as const,
+    message: `Datos agregados al registro #${existingId}. Se agrego: ${filledSummary}.`,
+    resetKey: Date.now(),
+  };
 }
 
 export async function createAdmission(
@@ -47,6 +159,12 @@ export async function createAdmission(
         ? { [hospitalResult.field]: hospitalResult.error }
         : undefined,
     };
+  }
+
+  const existingAdmissionId = readExistingAdmissionId(formData);
+
+  if (existingAdmissionId) {
+    return completarVaciosExistente(supabase, existingAdmissionId, parsed.data);
   }
 
   const confirmNotDuplicate = readFormFlag(formData, "confirm_not_duplicate");
