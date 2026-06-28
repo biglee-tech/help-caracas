@@ -75,22 +75,59 @@ export function CsvUpload({ hospitals }: { hospitals: Hospital[] }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
     closeButtonRef.current?.focus();
+
+    function getFocusable() {
+      return Array.from(
+        modalRef.current?.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+        ) ?? [],
+      );
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         close();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusable = getFocusable();
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -195,7 +232,7 @@ export function CsvUpload({ hospitals }: { hospitals: Hospital[] }) {
           }}
           role="dialog"
         >
-          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl" ref={modalRef}>
             <header className="flex items-start justify-between gap-4 border-b border-[var(--brand-border)] px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)]">
