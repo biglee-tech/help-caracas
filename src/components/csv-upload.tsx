@@ -1,142 +1,171 @@
 "use client";
 
-import { useState } from "react";
-import type { CsvRow } from "@/app/dashboard/actions";
-import { bulkCreateAdmissions } from "@/app/dashboard/actions";
+import { useEffect, useRef, useState } from "react";
+
+import {
+  bulkCreateAdmissions,
+  type BulkImportResult,
+  type CsvRowRaw,
+} from "@/app/dashboard/actions";
+import { parseCsv } from "@/lib/csv";
 import type { Hospital } from "@/lib/types";
 
-const EXPECTED_HEADERS = [
+const KNOWN_COLUMNS = [
   "nombres",
   "apellidos",
+  "cedula",
   "edad",
   "sexo",
-  "cedula",
   "procedencia",
   "servicio_requerido",
-  "hospital_id",
-  "fecha_ingreso",
   "estado",
-];
+] as const;
 
-function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-  const rows = lines.slice(1).map((line) => line.split(",").map((c) => c.trim()));
-  return { headers, rows };
-}
+const REQUIRED_COLUMNS = ["nombres", "apellidos"] as const;
 
-function rowsToData(headers: string[], rows: string[][], hospitalId: number): CsvRow[] {
-  const getValue = (row: string[], col: string): string => {
-    const idx = headers.indexOf(col);
-    return idx !== -1 ? (row[idx] ?? "") : "";
+function mapRows(headers: string[], rows: string[][]): CsvRowRaw[] {
+  const get = (row: string[], column: string): string => {
+    const index = headers.indexOf(column);
+    return index !== -1 ? (row[index] ?? "").trim() : "";
   };
 
   return rows.map((row) => ({
-    nombres: getValue(row, "nombres"),
-    apellidos: getValue(row, "apellidos"),
-    edad: getValue(row, "edad") ? Number(getValue(row, "edad")) : undefined,
-    sexo: getValue(row, "sexo"),
-    cedula: getValue(row, "cedula") || undefined,
-    procedencia: getValue(row, "procedencia") || undefined,
-    servicio_requerido: getValue(row, "servicio_requerido"),
-    hospital_id: hospitalId,
-    fecha_ingreso: getValue(row, "fecha_ingreso") || undefined,
-    estado: getValue(row, "estado") || undefined,
+    nombres: get(row, "nombres"),
+    apellidos: get(row, "apellidos"),
+    cedula: get(row, "cedula"),
+    edad: get(row, "edad"),
+    sexo: get(row, "sexo"),
+    procedencia: get(row, "procedencia"),
+    servicio_requerido: get(row, "servicio_requerido"),
+    estado: get(row, "estado"),
   }));
 }
 
 function downloadTemplate() {
-  const headerRow = EXPECTED_HEADERS.join(",");
-  const sampleRow = [
-    "Maria", "Perez", "35", "Femenino", "V-12345678",
-    "Sector Centro", "Traumatologia", "", "2025-06-27 14:30", "Pendiente",
-  ].join(",");
-  const bom = "\uFEFF";
-  const blob = new Blob([bom + headerRow + "\n" + sampleRow + "\n"], {
-    type: "text/csv;charset=utf-8",
-  });
+  const sample = [
+    "Maria",
+    "Perez Diaz",
+    "V-12345678",
+    "35",
+    "Femenino",
+    "Sector Centro, Caracas",
+    "Traumatologia",
+    "Pendiente",
+  ];
+  const content = `﻿${KNOWN_COLUMNS.join(",")}\n${sample.join(",")}\n`;
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "plantilla_importacion.csv";
-  a.click();
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "plantilla_importacion.csv";
+  anchor.click();
   URL.revokeObjectURL(url);
 }
 
 export function CsvUpload({ hospitals }: { hospitals: Hospital[] }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [rawRows, setRawRows] = useState<string[][] | null>(null);
-  const [csvHeaders, setCsvHeaders] = useState<string[] | null>(null);
+  const [rows, setRows] = useState<CsvRowRaw[] | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [selectedHospitalId, setSelectedHospitalId] = useState("");
-  const [preview, setPreview] = useState<CsvRow[] | null>(null);
-  const [result, setResult] = useState<{ imported: number; errors: number } | null>(null);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [result, setResult] = useState<BulkImportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        close();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  async function ingestFile(file: File) {
+    setError(null);
     setResult(null);
-    setValidationError(null);
 
     const text = await file.text();
-    const { headers, rows } = parseCsv(text);
+    const { headers, rows: dataRows } = parseCsv(text);
 
-    const headerMatch = EXPECTED_HEADERS.every((h) => headers.includes(h));
-    if (!headerMatch) {
-      const missing = EXPECTED_HEADERS.filter((h) => !headers.includes(h));
-      setValidationError(
-        `Faltan columnas en el CSV: ${missing.join(", ")}. Las columnas deben ser: ${EXPECTED_HEADERS.join(", ")}`,
+    const missing = REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+    if (missing.length > 0) {
+      setError(
+        `El CSV debe incluir las columnas: ${missing.join(", ")}. ` +
+          `Columnas reconocidas: ${KNOWN_COLUMNS.join(", ")}.`,
       );
       return;
     }
 
-    if (rows.length === 0) {
-      setValidationError("El archivo CSV no contiene datos.");
+    if (dataRows.length === 0) {
+      setError("El archivo no contiene filas con datos.");
       return;
     }
 
-    setCsvHeaders(headers);
-    setRawRows(rows);
+    setFileName(file.name);
+    setRows(mapRows(headers, dataRows));
     setStep(2);
   }
 
+  async function handleFileInput(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) {
+      await ingestFile(file);
+    }
+    event.target.value = "";
+  }
+
+  async function handleDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      await ingestFile(file);
+    }
+  }
+
   async function handleImport() {
-    if (!preview || preview.length === 0) return;
+    if (!rows || !selectedHospitalId) {
+      return;
+    }
+
     setLoading(true);
-    setResult(null);
+    setError(null);
 
     try {
-      const res = await bulkCreateAdmissions(preview);
-      setResult({ imported: res.imported, errors: res.errors });
-      setPreview(null);
+      const importResult = await bulkCreateAdmissions(rows, Number(selectedHospitalId), {
+        skipDuplicates,
+      });
+      setResult(importResult);
     } catch {
-      setValidationError("Error al importar. Intenta de nuevo.");
+      setError("No pudimos completar la importacion. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleHospitalChange(value: string) {
-    setSelectedHospitalId(value);
-    setValidationError(null);
-
-    if (value && csvHeaders && rawRows) {
-      setPreview(rowsToData(csvHeaders, rawRows, Number(value)));
-    } else {
-      setPreview(null);
-    }
-  }
-
   function reset() {
     setStep(1);
-    setRawRows(null);
-    setCsvHeaders(null);
-    setPreview(null);
-    setResult(null);
-    setValidationError(null);
+    setRows(null);
+    setFileName(null);
     setSelectedHospitalId("");
+    setSkipDuplicates(true);
+    setResult(null);
+    setError(null);
+    setIsDragging(false);
   }
 
   function close() {
@@ -147,7 +176,7 @@ export function CsvUpload({ hospitals }: { hospitals: Hospital[] }) {
   return (
     <>
       <button
-        className="shrink-0 rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--brand-accent-strong)] transition hover:bg-[var(--background)]"
+        className="shrink-0 rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--brand-accent-strong)] transition hover:border-[var(--brand-accent-strong)] hover:bg-[var(--background)]"
         onClick={() => setOpen(true)}
         type="button"
       >
@@ -156,200 +185,397 @@ export function CsvUpload({ hospitals }: { hospitals: Hospital[] }) {
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+          aria-labelledby="csv-modal-title"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              close();
+            }
+          }}
+          role="dialog"
         >
-          <div className="w-[80%] max-h-[85vh] overflow-auto rounded-3xl bg-white p-6 shadow-xl sm:p-8">
-            <div className="flex items-start justify-between gap-4">
+          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+            <header className="flex items-start justify-between gap-4 border-b border-[var(--brand-border)] px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-accent-strong)]">
                   Importacion masiva
                 </p>
-                <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
+                <h2
+                  className="mt-1 text-lg font-black text-[var(--foreground)] sm:text-xl"
+                  id="csv-modal-title"
+                >
                   Cargar registros desde CSV
                 </h2>
               </div>
               <button
-                className="shrink-0 rounded-2xl border border-[var(--brand-border)] px-4 py-2 text-sm font-bold text-[var(--brand-muted)] transition hover:bg-[var(--background)]"
+                aria-label="Cerrar"
+                className="shrink-0 rounded-full border border-[var(--brand-border)] px-3 py-1.5 text-sm font-bold text-[var(--brand-muted)] transition hover:bg-[var(--background)]"
                 onClick={close}
+                ref={closeButtonRef}
                 type="button"
               >
                 Cerrar
               </button>
-            </div>
+            </header>
 
-            {!result ? (
-              <div className="mt-6 space-y-6">
-                {step === 1 ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-accent-strong)] text-xs font-black text-white">
-                        1
-                      </span>
-                      <span className="text-sm font-bold text-[var(--foreground)]">
-                        Cargar archivo CSV
-                      </span>
-                    </div>
+            <div className="min-h-0 flex-1 overflow-auto px-5 py-5 sm:px-6">
+              {result ? (
+                <ImportResultView onClose={close} onReset={reset} result={result} />
+              ) : (
+                <div className="space-y-5">
+                  <StepIndicator step={step} />
 
-                    <p className="text-xs text-[var(--brand-muted)]">
-                      Columnas requeridas: {EXPECTED_HEADERS.join(", ")}
-                    </p>
-
-                    <button
-                      className="text-xs font-semibold text-[var(--brand-accent-strong)] underline-offset-2 hover:underline"
-                      onClick={downloadTemplate}
-                      type="button"
-                    >
-                      Descargar plantilla CSV
-                    </button>
-
-                    <input
-                      accept=".csv"
-                      className="block w-full text-sm text-[var(--foreground)] file:mr-3 file:cursor-pointer file:rounded-2xl file:border-0 file:bg-[var(--brand-primary)] file:px-4 file:py-2 file:text-sm file:font-bold file:text-white file:transition hover:file:bg-[var(--brand-primary-dark)]"
-                      onChange={handleFile}
-                      type="file"
+                  {step === 1 ? (
+                    <UploadStep
+                      error={error}
+                      isDragging={isDragging}
+                      onDownloadTemplate={downloadTemplate}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDrop={handleDrop}
+                      onFileInput={handleFileInput}
                     />
+                  ) : null}
 
-                    {validationError ? (
-                      <p className="text-sm font-medium text-rose-700">{validationError}</p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {step === 2 ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-accent-strong)] text-xs font-black text-white">
-                        2
-                      </span>
-                      <span className="text-sm font-bold text-[var(--foreground)]">
-                        Centro de salud y confirmacion
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-bold text-[var(--foreground)]">
-                        Centro de salud
-                      </label>
-                      <select
-                        className="mt-1.5 min-h-12 w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
-                        onChange={(e) => handleHospitalChange(e.target.value)}
-                        value={selectedHospitalId}
-                      >
-                        <option value="">Selecciona un centro de salud</option>
-                        {hospitals.map((h) => (
-                          <option key={h.id} value={h.id}>
-                            {h.nombre}{h.ciudad ? ` - ${h.ciudad}` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        className="rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--foreground)] transition hover:bg-[var(--background)]"
-                        onClick={() => setStep(1)}
-                        type="button"
-                      >
-                        Volver al paso 1
-                      </button>
-                      <button
-                        className="text-xs font-semibold text-[var(--brand-accent-strong)] underline-offset-2 hover:underline"
-                        onClick={downloadTemplate}
-                        type="button"
-                      >
-                        Descargar plantilla CSV
-                      </button>
-                    </div>
-
-                    {validationError ? (
-                      <p className="text-sm font-medium text-rose-700">{validationError}</p>
-                    ) : null}
-
-                    {preview && preview.length > 0 ? (
-                      <div className="space-y-3">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {preview.length} registros listos para importar
-                        </p>
-                        <div className="max-h-48 overflow-auto rounded-xl border border-[var(--brand-border)]">
-                          <table className="w-full text-left text-xs">
-                            <thead>
-                              <tr className="bg-[var(--brand-border)]/30 text-[var(--brand-muted)]">
-                                <th className="px-3 py-2 font-semibold">nombres</th>
-                                <th className="px-3 py-2 font-semibold">apellidos</th>
-                                <th className="px-3 py-2 font-semibold">edad</th>
-                                <th className="px-3 py-2 font-semibold">sexo</th>
-                                <th className="px-3 py-2 font-semibold">cedula</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {preview.slice(0, 10).map((row, i) => (
-                                <tr key={i} className="border-t border-[var(--brand-border)]/50">
-                                  <td className="px-3 py-1.5">{row.nombres}</td>
-                                  <td className="px-3 py-1.5">{row.apellidos}</td>
-                                  <td className="px-3 py-1.5">{row.edad ?? ""}</td>
-                                  <td className="px-3 py-1.5">{row.sexo}</td>
-                                  <td className="px-3 py-1.5">{row.cedula ?? ""}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        {preview.length > 10 ? (
-                          <p className="text-xs text-[var(--brand-muted)]">
-                            Mostrando 10 de {preview.length} registros
-                          </p>
-                        ) : null}
-                        <div className="flex gap-2">
-                          <button
-                            className="rounded-2xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-60"
-                            disabled={loading}
-                            onClick={handleImport}
-                            type="button"
-                          >
-                            {loading ? "Importando..." : `Importar ${preview.length} registros`}
-                          </button>
-                          <button
-                            className="rounded-2xl border border-[var(--brand-border)] bg-white px-5 py-2.5 text-sm font-bold text-[var(--foreground)] transition hover:bg-[var(--background)]"
-                            disabled={loading}
-                            onClick={reset}
-                            type="button"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--brand-muted)]">
-                        Selecciona un centro de salud para ver la vista previa.
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-6">
-                <div className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
-                  result.errors === 0
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-amber-300 bg-amber-50 text-amber-900"
-                }`}>
-                  {result.errors === 0
-                    ? `Se importaron ${result.imported} registros correctamente.`
-                    : `Importacion completada: ${result.imported} exitosos, ${result.errors} errores.`}
+                  {step === 2 && rows ? (
+                    <ConfirmStep
+                      error={error}
+                      fileName={fileName}
+                      hospitals={hospitals}
+                      loading={loading}
+                      onBack={() => setStep(1)}
+                      onHospitalChange={setSelectedHospitalId}
+                      onImport={handleImport}
+                      onSkipDuplicatesChange={setSkipDuplicates}
+                      rows={rows}
+                      selectedHospitalId={selectedHospitalId}
+                      skipDuplicates={skipDuplicates}
+                    />
+                  ) : null}
                 </div>
-                <button
-                  className="mt-4 rounded-2xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)]"
-                  onClick={close}
-                  type="button"
-                >
-                  Cerrar
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       ) : null}
     </>
+  );
+}
+
+function StepIndicator({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="flex items-center gap-3 text-xs font-bold">
+      <StepDot active={step === 1} done={step > 1} label="Archivo" number={1} />
+      <span className="h-px flex-1 bg-[var(--brand-border)]" />
+      <StepDot active={step === 2} done={false} label="Confirmar" number={2} />
+    </div>
+  );
+}
+
+function StepDot({
+  active,
+  done,
+  label,
+  number,
+}: {
+  active: boolean;
+  done: boolean;
+  label: string;
+  number: number;
+}) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
+          active || done
+            ? "bg-[var(--brand-accent-strong)] text-white"
+            : "bg-[var(--brand-border)] text-[var(--brand-muted)]"
+        }`}
+      >
+        {number}
+      </span>
+      <span className={active ? "text-[var(--foreground)]" : "text-[var(--brand-muted)]"}>
+        {label}
+      </span>
+    </span>
+  );
+}
+
+function UploadStep({
+  error,
+  isDragging,
+  onDownloadTemplate,
+  onDragLeave,
+  onDragOver,
+  onDrop,
+  onFileInput,
+}: {
+  error: string | null;
+  isDragging: boolean;
+  onDownloadTemplate: () => void;
+  onDragLeave: () => void;
+  onDragOver: (event: React.DragEvent) => void;
+  onDrop: (event: React.DragEvent) => void;
+  onFileInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-6 text-[var(--brand-muted)]">
+        Sube un archivo CSV con las personas hospitalizadas. Solo{" "}
+        <strong className="text-[var(--foreground)]">nombres</strong> y{" "}
+        <strong className="text-[var(--foreground)]">apellidos</strong> son obligatorios;
+        el resto se completa automaticamente si falta.
+      </p>
+
+      <label
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed px-6 py-10 text-center transition ${
+          isDragging
+            ? "border-[var(--brand-accent-strong)] bg-[color:rgba(102,200,198,0.10)]"
+            : "border-[var(--brand-border)] bg-[var(--background)] hover:border-[var(--brand-accent-strong)]"
+        }`}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        <span className="text-sm font-bold text-[var(--foreground)]">
+          Arrastra el CSV aqui o haz clic para elegirlo
+        </span>
+        <span className="text-xs text-[var(--brand-muted)]">Formato .csv (UTF-8)</span>
+        <input accept=".csv,text/csv" className="hidden" onChange={onFileInput} type="file" />
+      </label>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-[var(--brand-muted)]">
+          Columnas reconocidas: {KNOWN_COLUMNS.join(", ")}.
+        </p>
+        <button
+          className="text-xs font-bold text-[var(--brand-accent-strong)] underline-offset-2 hover:underline"
+          onClick={onDownloadTemplate}
+          type="button"
+        >
+          Descargar plantilla
+        </button>
+      </div>
+
+      {error ? <ErrorBanner message={error} /> : null}
+    </div>
+  );
+}
+
+function ConfirmStep({
+  error,
+  fileName,
+  hospitals,
+  loading,
+  onBack,
+  onHospitalChange,
+  onImport,
+  onSkipDuplicatesChange,
+  rows,
+  selectedHospitalId,
+  skipDuplicates,
+}: {
+  error: string | null;
+  fileName: string | null;
+  hospitals: Hospital[];
+  loading: boolean;
+  onBack: () => void;
+  onHospitalChange: (value: string) => void;
+  onImport: () => void;
+  onSkipDuplicatesChange: (value: boolean) => void;
+  rows: CsvRowRaw[];
+  selectedHospitalId: string;
+  skipDuplicates: boolean;
+}) {
+  const previewRows = rows.slice(0, 8);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[var(--background)] px-4 py-3">
+        <p className="text-sm font-semibold text-[var(--foreground)]">
+          {rows.length} {rows.length === 1 ? "fila detectada" : "filas detectadas"}
+          {fileName ? <span className="text-[var(--brand-muted)]"> · {fileName}</span> : null}
+        </p>
+        <button
+          className="text-xs font-bold text-[var(--brand-accent-strong)] underline-offset-2 hover:underline"
+          onClick={onBack}
+          type="button"
+        >
+          Cambiar archivo
+        </button>
+      </div>
+
+      <label className="block space-y-2">
+        <span className="text-sm font-bold text-[var(--foreground)]">
+          Centro de salud de estos registros
+        </span>
+        <select
+          className="min-h-12 w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+          onChange={(event) => onHospitalChange(event.target.value)}
+          value={selectedHospitalId}
+        >
+          <option value="">Selecciona un centro de salud</option>
+          {hospitals.map((hospital) => (
+            <option key={hospital.id} value={hospital.id}>
+              {hospital.nombre}
+              {hospital.ciudad ? ` - ${hospital.ciudad}` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3">
+        <input
+          checked={skipDuplicates}
+          className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+          onChange={(event) => onSkipDuplicatesChange(event.target.checked)}
+          type="checkbox"
+        />
+        <span className="text-sm text-[var(--foreground)]">
+          <span className="font-bold">Saltar posibles duplicados</span>
+          <span className="mt-0.5 block text-xs text-[var(--brand-muted)]">
+            Omite filas cuya cedula ya existe en el sistema o se repite dentro del archivo.
+          </span>
+        </span>
+      </label>
+
+      <div className="space-y-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-muted)]">
+          Vista previa
+        </p>
+        <div className="overflow-auto rounded-2xl border border-[var(--brand-border)]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[var(--background)] text-[var(--brand-muted)]">
+              <tr>
+                <th className="px-3 py-2 font-semibold">Nombres</th>
+                <th className="px-3 py-2 font-semibold">Apellidos</th>
+                <th className="px-3 py-2 font-semibold">Cedula</th>
+                <th className="px-3 py-2 font-semibold">Edad</th>
+                <th className="px-3 py-2 font-semibold">Sexo</th>
+                <th className="px-3 py-2 font-semibold">Procedencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {previewRows.map((row, index) => (
+                <tr className="border-t border-[var(--brand-border)]" key={index}>
+                  <td className="px-3 py-1.5">{row.nombres}</td>
+                  <td className="px-3 py-1.5">{row.apellidos}</td>
+                  <td className="px-3 py-1.5">{row.cedula}</td>
+                  <td className="px-3 py-1.5">{row.edad}</td>
+                  <td className="px-3 py-1.5">{row.sexo}</td>
+                  <td className="px-3 py-1.5">{row.procedencia}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {rows.length > previewRows.length ? (
+          <p className="text-xs text-[var(--brand-muted)]">
+            Mostrando {previewRows.length} de {rows.length} filas.
+          </p>
+        ) : null}
+      </div>
+
+      {error ? <ErrorBanner message={error} /> : null}
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <button
+          className="rounded-2xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:bg-[var(--brand-border)]"
+          disabled={loading || !selectedHospitalId}
+          onClick={onImport}
+          type="button"
+        >
+          {loading ? "Importando..." : `Importar ${rows.length} registros`}
+        </button>
+        {!selectedHospitalId ? (
+          <p className="text-xs text-[var(--brand-muted)]">
+            Selecciona un centro de salud para continuar.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ImportResultView({
+  onClose,
+  onReset,
+  result,
+}: {
+  onClose: () => void;
+  onReset: () => void;
+  result: BulkImportResult;
+}) {
+  const hasFailures = result.failed.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <div
+        className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+          hasFailures
+            ? "border-amber-300 bg-amber-50 text-amber-900"
+            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+        }`}
+      >
+        Se importaron <strong>{result.imported}</strong> registros.
+        {result.skipped > 0 ? <> {result.skipped} se saltaron por duplicados.</> : null}
+        {hasFailures ? <> {result.failed.length} no se pudieron importar.</> : null}
+      </div>
+
+      {hasFailures ? (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-muted)]">
+            Filas con problemas
+          </p>
+          <div className="max-h-48 overflow-auto rounded-2xl border border-[var(--brand-border)]">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[var(--background)] text-[var(--brand-muted)]">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Fila</th>
+                  <th className="px-3 py-2 font-semibold">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.failed.map((failure) => (
+                  <tr className="border-t border-[var(--brand-border)]" key={failure.row}>
+                    <td className="px-3 py-1.5 font-semibold">{failure.row}</td>
+                    <td className="px-3 py-1.5">{failure.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          className="rounded-2xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-primary-dark)]"
+          onClick={onClose}
+          type="button"
+        >
+          Listo
+        </button>
+        <button
+          className="rounded-2xl border border-[var(--brand-border)] bg-white px-5 py-3 text-sm font-bold text-[var(--foreground)] transition hover:bg-[var(--background)]"
+          onClick={onReset}
+          type="button"
+        >
+          Importar otro archivo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+      {message}
+    </div>
   );
 }

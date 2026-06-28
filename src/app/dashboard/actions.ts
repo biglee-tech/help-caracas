@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { ADMISSION_SELECT, normalizeAdmissionRow } from "@/lib/admissions-query";
+import { normalizeEstado, normalizeSexo } from "@/lib/csv";
 import { resolveHospitalId } from "@/lib/hospitals";
 import {
   buildFillEmptyUpdates,
@@ -9,23 +11,23 @@ import {
   normalizeAdmissionNames,
   recordAllowsPublicUpdate,
 } from "@/lib/merge-rules";
-import { formatCedulaForDisplay } from "@/lib/person-normalize";
+import {
+  formatCedulaForDisplay,
+  formatDisplayName,
+  normalizeCedula,
+} from "@/lib/person-normalize";
 import {
   findSimilarAdmissions,
   toSimilarMatchSummary,
 } from "@/lib/similar-admissions";
-import { ADMISSION_SELECT, normalizeAdmissionRow } from "@/lib/admissions-query";
 import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
-import type { AdmissionActionState, EditAdmissionState, EmergencyAdmission } from "@/lib/types";
+import type { AdmissionActionState, EditAdmissionState } from "@/lib/types";
 import {
   admissionSchema,
-  admissionStatuses,
   editAdmissionSchema,
   formDataToAdmissionInput,
   formDataToEditAdmissionInput,
   getFieldErrors,
-  sexOptions,
 } from "@/lib/validation";
 
 function readFormFlag(formData: FormData, key: string) {
@@ -212,87 +214,165 @@ export async function createAdmission(
   };
 }
 
-export type CsvRow = {
-  nombres: string;
-  apellidos: string;
-  edad?: number;
-  sexo: string;
+/** Valores crudos (strings) de una fila del CSV, mapeados por columna. */
+export type CsvRowRaw = {
+  nombres?: string;
+  apellidos?: string;
+  edad?: string;
+  sexo?: string;
   cedula?: string;
   procedencia?: string;
-  servicio_requerido: string;
-  hospital_id: number;
-  fecha_ingreso?: string;
+  servicio_requerido?: string;
   estado?: string;
 };
 
+export type BulkImportResult = {
+  imported: number;
+  skipped: number;
+  failed: { row: number; reason: string }[];
+};
+
+const INSERT_CHUNK_SIZE = 200;
+
+type ValidEntry = {
+  rowNumber: number;
+  record: Record<string, unknown>;
+  cedulaDigits: string | null;
+};
+
+function parseCsvEdad(value: string | undefined): number | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 130 ? parsed : null;
+}
+
 export async function bulkCreateAdmissions(
-  rows: CsvRow[],
-): Promise<{ ok: boolean; message: string; imported: number; errors: number }> {
+  rawRows: CsvRowRaw[],
+  hospitalId: number,
+  options?: { skipDuplicates?: boolean },
+): Promise<BulkImportResult> {
   const supabase = await createClient();
+
+  if (!Number.isInteger(hospitalId) || hospitalId <= 0) {
+    return {
+      imported: 0,
+      skipped: 0,
+      failed: rawRows.map((_, index) => ({
+        row: index + 1,
+        reason: "Centro de salud invalido",
+      })),
+    };
+  }
+
+  const failed: BulkImportResult["failed"] = [];
+  const valid: ValidEntry[] = [];
+
+  // 1. Validar y normalizar cada fila. Solo falla si no hay nombres/apellidos;
+  //    el resto se completa con defaults sensatos para no descartar personas.
+  rawRows.forEach((raw, index) => {
+    const rowNumber = index + 1;
+    const nombres = raw.nombres?.trim() ?? "";
+    const apellidos = raw.apellidos?.trim() ?? "";
+
+    if (!nombres || !apellidos) {
+      failed.push({ row: rowNumber, reason: "Falta nombres o apellidos" });
+      return;
+    }
+
+    const cedula = raw.cedula?.trim() ? formatCedulaForDisplay(raw.cedula.trim()) : null;
+
+    valid.push({
+      rowNumber,
+      cedulaDigits: normalizeCedula(cedula),
+      record: {
+        nombres: formatDisplayName(nombres),
+        apellidos: formatDisplayName(apellidos),
+        sexo: normalizeSexo(raw.sexo),
+        edad: parseCsvEdad(raw.edad),
+        cedula,
+        procedencia: raw.procedencia?.trim() || null,
+        servicio_requerido: raw.servicio_requerido?.trim() || "Sin especificar",
+        estado: normalizeEstado(raw.estado),
+        hospital_id: hospitalId,
+      },
+    });
+  });
+
+  // 2. (Opcional) Saltar duplicados por cedula: dentro del archivo y contra la DB.
+  let skipped = 0;
+  let toInsert = valid;
+
+  if (options?.skipDuplicates) {
+    const importCedulas = valid
+      .map((entry) => entry.cedulaDigits)
+      .filter((digits): digits is string => digits !== null);
+
+    const existing = new Set<string>();
+
+    if (importCedulas.length > 0) {
+      const { data } = await supabase
+        .from("ingresos_emergencia")
+        .select("cedula")
+        .in("cedula", importCedulas.map((digits) => `V-${digits}`));
+
+      for (const row of data ?? []) {
+        const digits = normalizeCedula((row as { cedula: string | null }).cedula);
+        if (digits) {
+          existing.add(digits);
+        }
+      }
+    }
+
+    const seen = new Set<string>();
+    toInsert = valid.filter((entry) => {
+      if (!entry.cedulaDigits) {
+        return true; // sin cedula no se puede deduplicar de forma confiable
+      }
+      if (existing.has(entry.cedulaDigits) || seen.has(entry.cedulaDigits)) {
+        skipped += 1;
+        return false;
+      }
+      seen.add(entry.cedulaDigits);
+      return true;
+    });
+  }
+
+  // 3. Insertar por lotes; si un lote falla, reintentar fila por fila para
+  //    reportar exactamente cuales fallaron.
   let imported = 0;
-  let errors = 0;
 
-  for (const row of rows) {
-    const parsed = z.object({
-      nombres: z.string().min(1),
-      apellidos: z.string().min(1),
-      edad: z.coerce.number().int().min(0).max(130).optional(),
-      sexo: z.enum(sexOptions),
-      cedula: z.string().optional(),
-      procedencia: z.string().optional(),
-      servicio_requerido: z.string().min(1),
-      hospital_id: z.number().int().positive(),
-      fecha_ingreso: z.string().optional(),
-      estado: z.enum(admissionStatuses).optional().default("Pendiente"),
-    }).safeParse(row);
+  for (let i = 0; i < toInsert.length; i += INSERT_CHUNK_SIZE) {
+    const chunk = toInsert.slice(i, i + INSERT_CHUNK_SIZE);
+    const { error } = await supabase
+      .from("ingresos_emergencia")
+      .insert(chunk.map((entry) => entry.record));
 
-    if (!parsed.success) {
-      errors++;
+    if (!error) {
+      imported += chunk.length;
       continue;
     }
 
-    const record: Record<string, unknown> = {
-      nombres: parsed.data.nombres.trim(),
-      apellidos: parsed.data.apellidos.trim(),
-      sexo: parsed.data.sexo,
-      servicio_requerido: parsed.data.servicio_requerido.trim(),
-      hospital_id: parsed.data.hospital_id,
-      estado: parsed.data.estado,
-    };
+    for (const entry of chunk) {
+      const { error: rowError } = await supabase
+        .from("ingresos_emergencia")
+        .insert(entry.record);
 
-    if (parsed.data.cedula?.trim()) {
-      record.cedula = formatCedulaForDisplay(parsed.data.cedula.trim());
-    }
-    if (parsed.data.edad !== undefined) {
-      record.edad = parsed.data.edad;
-    }
-    if (parsed.data.procedencia?.trim()) {
-      record.procedencia = parsed.data.procedencia.trim();
-    }
-    if (parsed.data.fecha_ingreso?.trim()) {
-      record.fecha_ingreso = parsed.data.fecha_ingreso.trim();
-    }
-
-    const { error } = await supabase.from("ingresos_emergencia").insert(record);
-
-    if (error) {
-      errors++;
-    } else {
-      imported++;
+      if (rowError) {
+        failed.push({ row: entry.rowNumber, reason: "Error al guardar en la base de datos" });
+      } else {
+        imported += 1;
+      }
     }
   }
 
+  failed.sort((a, b) => a.row - b.row);
   revalidatePath("/dashboard");
 
-  return {
-    ok: errors === 0,
-    message:
-      errors === 0
-        ? `Se importaron ${imported} registros correctamente.`
-        : `Se importaron ${imported} registros (${errors} errores).`,
-    imported,
-    errors,
-  };
+  return { imported, skipped, failed };
 }
 
 export async function editAdmission(

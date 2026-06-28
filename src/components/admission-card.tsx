@@ -13,15 +13,12 @@ type AdmissionCardProps = {
 export function AdmissionCard({ admission }: AdmissionCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [currentEstado, setCurrentEstado] = useState(admission.estado ?? "Pendiente");
-
-  const matchForEdit = admissionToMatchSummary(admission);
 
   if (isEditing) {
     return (
       <article className="min-w-0 max-w-full rounded-3xl bg-white p-4 shadow-sm shadow-[rgba(22,63,82,0.08)] ring-1 ring-[var(--brand-border)] sm:p-5">
         <AdmissionEditForm
-          match={{ ...matchForEdit, estado: currentEstado }}
+          match={admissionToMatchSummary(admission)}
           onCancel={() => setIsEditing(false)}
           onSuccess={(message) => {
             setIsEditing(false);
@@ -46,7 +43,7 @@ export function AdmissionCard({ admission }: AdmissionCardProps) {
             <h3 className="min-w-0 break-words text-base font-black text-[var(--foreground)] sm:text-lg">
               {admission.nombres} {admission.apellidos}
             </h3>
-            <StatusTag status={currentEstado} />
+            <StatusTag status={admission.estado ?? "Pendiente"} />
           </div>
           <p className="mt-1 break-words text-sm text-[var(--brand-muted)]">
             {admission.hospitales?.nombre ?? "Hospital no disponible"}

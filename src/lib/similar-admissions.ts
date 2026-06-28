@@ -4,7 +4,6 @@ import { ADMISSION_SELECT, normalizeAdmissionRows } from "@/lib/admissions-query
 import { rankSimilarMatches } from "@/lib/person-match";
 import { tokenizeName } from "@/lib/person-normalize";
 import type {
-  EmergencyAdmission,
   SimilarityInput,
   SimilarMatch,
   SimilarMatchSummary,

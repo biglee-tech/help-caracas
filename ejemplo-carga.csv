@@ -1,0 +1,6 @@
+﻿nombres,apellidos,cedula,edad,sexo,procedencia,servicio_requerido,estado
+Maria Jose,Pérez Díaz,V-12345678,34,F,"Caracas, Miranda","Cirugia, evaluacion respiratoria",hospitalizado
+José,González,V-9876543,67,masculino,Petare,Traumatologia,fallecida
+Ana,Abreu,,,,El Valle,,
+Maria Jose,Perez Diaz,V-12345678,34,f,Caracas,Cirugia,pendiente
+,Solo Apellido,V-111,20,M,Chacao,Evaluacion,pendiente

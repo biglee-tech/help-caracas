@@ -10,7 +10,7 @@ import { ADMISSION_SELECT, buildSearchOrClause, normalizeAdmissionRows, normaliz
 import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-import type { EmergencyAdmission, Hospital } from "@/lib/types";
+import type { Hospital } from "@/lib/types";
 
 type DashboardSearchParams = {
   q?: string;
