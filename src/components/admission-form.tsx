@@ -105,6 +105,8 @@ function AdmissionFormFields({
   const [dismissedConfirmationId, setDismissedConfirmationId] = useState<
     string | null
   >(null);
+  const [estado, setEstado] = useState<string>(admissionStatuses[0]);
+  const isFallecido = estado === "Fallecido";
   const isCustomHospital =
     !hasHospitals || selectedHospitalId === CUSTOM_HOSPITAL_VALUE;
   const confirmationBatchId =
@@ -397,6 +399,8 @@ function AdmissionFormFields({
           <select
             className="min-h-12 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
             name="estado"
+            onChange={(event) => setEstado(event.target.value)}
+            value={estado}
           >
             {admissionStatuses.map((estado) => (
               <option key={estado} value={estado}>
@@ -412,15 +416,24 @@ function AdmissionFormFields({
           Servicio requerido
         </span>
         <textarea
-          className="min-h-28 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)]"
+          className="min-h-28 w-full min-w-0 max-w-full rounded-2xl border border-[var(--brand-border)] bg-white px-4 py-3 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(18,52,59,0.42)] focus:border-[var(--brand-accent-strong)] focus:ring-4 focus:ring-[color:rgba(102,200,198,0.18)] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          disabled={isFallecido}
           name="servicio_requerido"
-          placeholder="Ej. Traumatologia, cirugia, evaluacion respiratoria"
-          required
+          placeholder={isFallecido ? "No aplica" : "Ej. Traumatologia, cirugia, evaluacion respiratoria"}
+          required={!isFallecido}
         />
+        {isFallecido ? (
+          <input name="servicio_requerido" type="hidden" value="N/A" />
+        ) : null}
         {fieldErrors?.servicio_requerido ? (
           <span className="text-xs font-medium text-rose-700">
             {fieldErrors.servicio_requerido}
           </span>
+        ) : null}
+        {isFallecido ? (
+          <p className="text-xs text-[var(--brand-muted)]">
+            No es requerido para pacientes fallecidos.
+          </p>
         ) : null}
       </label>
 
