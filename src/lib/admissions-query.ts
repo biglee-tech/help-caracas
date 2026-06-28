@@ -24,11 +24,19 @@ export function normalizeSearchTerm(value?: string | null): string {
 }
 
 export function buildSearchOrClause(searchTerm: string): string {
-  return [
+  const clauses = [
     `nombres.ilike.%${searchTerm}%`,
     `apellidos.ilike.%${searchTerm}%`,
     `cedula.ilike.%${searchTerm}%`,
     `procedencia.ilike.%${searchTerm}%`,
     `servicio_requerido.ilike.%${searchTerm}%`,
-  ].join(",");
+  ];
+
+  const words = searchTerm.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    clauses.push(`and(nombres.ilike.%${words[0]}%,apellidos.ilike.%${words[1]}%)`);
+    clauses.push(`and(nombres.ilike.%${words[1]}%,apellidos.ilike.%${words[0]}%)`);
+  }
+
+  return clauses.join(",");
 }
