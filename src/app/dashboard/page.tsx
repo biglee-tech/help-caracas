@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
 import { ExportCsvButton } from "@/components/export-csv-button";
+import { SearchButton } from "@/components/search-button";
 import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -162,9 +163,7 @@ export default async function DashboardPage({
                 <option value="Atendido">Atendido</option>
                 <option value="Fallecido">Fallecido</option>
               </select>
-              <button className="min-h-12 rounded-2xl bg-[var(--brand-primary)] px-5 py-3 font-bold text-white transition hover:bg-[var(--brand-primary-dark)]">
-                Buscar
-              </button>
+              <SearchButton />
             </form>
           </div>
 
