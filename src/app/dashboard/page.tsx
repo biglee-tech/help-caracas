@@ -17,6 +17,7 @@ type DashboardSearchParams = {
   hospital_id?: string;
   estado?: string;
   page?: string;
+  id?: string;
 };
 
 const PAGE_SIZE = 25;
@@ -110,7 +111,7 @@ export default async function DashboardPage({
           <AdmissionForm hospitals={hospitals} />
         </section>
 
-        <section className="min-w-0 max-w-full space-y-5">
+        <section className="min-w-0 max-w-full space-y-5" id="lista">
           <div className="min-w-0 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-[var(--brand-border)] sm:p-5 md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
@@ -173,6 +174,18 @@ export default async function DashboardPage({
               message="No pudimos consultar ingresos. Revisa la conexion e intenta nuevamente."
               tone="error"
             />
+          ) : null}
+
+          {getIdFilter(params.id) ? (
+            <div className="flex flex-col gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-semibold text-sky-900">
+                Mostrando el registro seleccionado desde una coincidencia. Usa
+                &quot;Editar&quot; para actualizarlo.
+              </span>
+              <Link className="font-bold text-sky-700 underline" href="/dashboard">
+                Ver todos los ingresos
+              </Link>
+            </div>
           ) : null}
 
           <AdmissionsList admissions={admissions} />
@@ -353,6 +366,13 @@ function fetchAdmissions(
     .order("id", { ascending: false })
     .range(from, to);
 
+  // Filtro directo por id (al saltar desde una coincidencia): es preciso y
+  // tiene prioridad sobre los demas filtros.
+  const idFilter = getIdFilter(params.id);
+  if (idFilter) {
+    return query.eq("id", idFilter);
+  }
+
   const hospitalId = Number(params.hospital_id);
   if (Number.isInteger(hospitalId) && hospitalId > 0) {
     query = query.eq("hospital_id", hospitalId);
@@ -368,6 +388,11 @@ function fetchAdmissions(
   }
 
   return query;
+}
+
+function getIdFilter(value?: string): number | null {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 function getCurrentPage(value?: string) {

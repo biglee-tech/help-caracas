@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { formatAdmissionDate } from "@/lib/dates";
 import type { SimilarMatchSummary } from "@/lib/types";
 
@@ -62,6 +64,14 @@ export function SimilarMatchesPanel({
             ) : (
               <SimilarMatchDetails match={match} />
             )}
+            <div className="mt-2 flex justify-end">
+              <Link
+                className="text-xs font-bold text-[var(--brand-accent-strong)] underline transition hover:text-[var(--brand-primary)]"
+                href={`/dashboard?id=${match.id}#lista`}
+              >
+                Ver en la lista para editar →
+              </Link>
+            </div>
           </li>
         ))}
       </ul>
