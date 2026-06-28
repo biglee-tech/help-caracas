@@ -92,7 +92,7 @@ export default async function DashboardPage({
         <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7">
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <SummaryCard label="Centros de salud reportando" value={hospitals.length} />
-            <SummaryCard label="Pacientes registrados" value={totalRegistered} />
+            <SummaryCard label="Pacientes registrados" value={totalRegistered.toLocaleString("es-VE")} />
             <SummaryCard label="Actualizacion reciente" value={lastUpdatedAt} />
           </div>
         </div>
@@ -125,7 +125,7 @@ export default async function DashboardPage({
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <p className="rounded-full border border-[var(--brand-border)] bg-white px-3 py-1 text-sm font-bold text-[var(--brand-accent-strong)]">
-                  {totalRegistered} registros
+                  {totalRegistered.toLocaleString("es-VE")} registros
                 </p>
                 <ExportCsvButton href={getExportHref(params)} />
               </div>
