@@ -28,10 +28,3 @@ export function formatAdmissionDate(
   }).format(date);
 }
 
-/** @deprecated Usar formatAdmissionDate */
-export function formatInCaracas(
-  value: string | Date,
-  options?: Intl.DateTimeFormatOptions,
-): string {
-  return formatAdmissionDate(value, options);
-}

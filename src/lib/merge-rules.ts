@@ -20,10 +20,6 @@ export type FillEmptyFieldsResult = {
   filledFields: string[];
 };
 
-/**
- * Debe coincidir con la policy "Publico puede actualizar ingresos vacios"
- * ya aplicada en Supabase (cedula, edad o procedencia NULL).
- */
 export function recordAllowsPublicUpdate(existing: EmergencyAdmission): boolean {
   return (
     existing.cedula === null ||

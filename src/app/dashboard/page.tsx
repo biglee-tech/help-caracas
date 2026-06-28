@@ -6,6 +6,7 @@ import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
 import { ExportCsvButton } from "@/components/export-csv-button";
 import { SearchButton } from "@/components/search-button";
+import { ADMISSION_SELECT, buildSearchOrClause, normalizeAdmissionRows, normalizeSearchTerm } from "@/lib/admissions-query";
 import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -47,7 +48,7 @@ export default async function DashboardPage({
   ]);
 
   const hospitals = (hospitalsData ?? []) as Hospital[];
-  const admissions = normalizeAdmissions(admissionsResult.data ?? []);
+  const admissions = normalizeAdmissionRows(admissionsResult.data ?? []);
   const totalAdmissions = admissionsResult.count ?? 0;
   const totalRegistered = totalAdmissionsResult.count ?? totalAdmissions;
   const currentPage = getCurrentPage(params.page);
@@ -347,10 +348,7 @@ function fetchAdmissions(
 
   let query = supabase
     .from("ingresos_emergencia")
-    .select(
-      "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
-      { count: "exact" },
-    )
+    .select(ADMISSION_SELECT, { count: "exact" })
     .order("fecha_ingreso", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
@@ -366,16 +364,7 @@ function fetchAdmissions(
 
   const searchTerm = normalizeSearchTerm(params.q);
   if (searchTerm) {
-    query = query.or(
-      [
-        `nombres.ilike.%${searchTerm}%`,
-        `apellidos.ilike.%${searchTerm}%`,
-        `cedula.ilike.%${searchTerm}%`,
-        `sexo.ilike.%${searchTerm}%`,
-        `procedencia.ilike.%${searchTerm}%`,
-        `servicio_requerido.ilike.%${searchTerm}%`,
-      ].join(","),
-    );
+    query = query.or(buildSearchOrClause(searchTerm));
   }
 
   return query;
@@ -386,29 +375,6 @@ function getCurrentPage(value?: string) {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
-function normalizeSearchTerm(value?: string) {
-  return value?.trim().replace(/[%,()]/g, "").slice(0, 80);
-}
-
-function normalizeAdmissions(data: unknown): EmergencyAdmission[] {
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
-  return data.map((item) => {
-    const admission = item as EmergencyAdmission & {
-      hospitales?: Hospital | Hospital[] | null;
-    };
-    const hospital = Array.isArray(admission.hospitales)
-      ? admission.hospitales[0]
-      : admission.hospitales;
-
-    return {
-      ...admission,
-      hospitales: hospital ?? null,
-    };
-  });
-}
 
 function Alert({ message, tone }: { message: string; tone: "error" }) {
   const classes =

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ADMISSION_SELECT, normalizeAdmissionRows } from "@/lib/admissions-query";
 import { rankSimilarMatches } from "@/lib/person-match";
 import { tokenizeName } from "@/lib/person-normalize";
 import type {
@@ -9,7 +10,7 @@ import type {
   SimilarMatchSummary,
 } from "@/lib/types";
 
-const DEFAULT_SEARCH_HOURS = 72;
+const DEFAULT_SEARCH_HOURS = 168;
 const MAX_CANDIDATES = 50;
 const MAX_RESULTS = 5;
 
@@ -18,26 +19,6 @@ export function getSimilarSearchHours(): number {
   return Number.isFinite(configured) && configured > 0
     ? configured
     : DEFAULT_SEARCH_HOURS;
-}
-
-function normalizeAdmissionRows(data: unknown): EmergencyAdmission[] {
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
-  return data.map((item) => {
-    const admission = item as EmergencyAdmission & {
-      hospitales?: EmergencyAdmission["hospitales"] | EmergencyAdmission["hospitales"][];
-    };
-    const hospital = Array.isArray(admission.hospitales)
-      ? admission.hospitales[0]
-      : admission.hospitales;
-
-    return {
-      ...admission,
-      hospitales: hospital ?? null,
-    };
-  });
 }
 
 function buildSearchFilters(input: SimilarityInput): string[] {
@@ -69,9 +50,7 @@ export async function findSimilarAdmissions(
 
   const query = supabase
     .from("ingresos_emergencia")
-    .select(
-      "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
-    )
+    .select(ADMISSION_SELECT)
     .gte("fecha_ingreso", since)
     .order("fecha_ingreso", { ascending: false })
     .limit(MAX_CANDIDATES)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { buildSearchOrClause, normalizeSearchTerm } from "@/lib/admissions-query";
 import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -72,18 +73,9 @@ async function fetchAdmissionsForExport(
       query = query.eq("estado", estado);
     }
 
-    const searchTerm = normalizeSearchTerm(params.get("q") ?? undefined);
+    const searchTerm = normalizeSearchTerm(params.get("q"));
     if (searchTerm) {
-      query = query.or(
-        [
-          `nombres.ilike.%${searchTerm}%`,
-          `apellidos.ilike.%${searchTerm}%`,
-          `cedula.ilike.%${searchTerm}%`,
-          `sexo.ilike.%${searchTerm}%`,
-          `procedencia.ilike.%${searchTerm}%`,
-          `servicio_requerido.ilike.%${searchTerm}%`,
-        ].join(","),
-      );
+      query = query.or(buildSearchOrClause(searchTerm));
     }
 
     const { data, error } = await query;
@@ -161,6 +153,3 @@ function escapeCsvValue(value: string | number) {
   return text;
 }
 
-function normalizeSearchTerm(value?: string) {
-  return value?.trim().replace(/[%,()]/g, "").slice(0, 80);
-}

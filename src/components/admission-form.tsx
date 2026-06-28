@@ -123,7 +123,7 @@ function AdmissionFormFields({
   const [apellidos, setApellidos] = useState("");
   const [cedula, setCedula] = useState("");
   const [edad, setEdad] = useState("");
-  const [sexo, setSexo] = useState<string>(sexOptions[0]);
+  const [sexo, setSexo] = useState<string>("No especificado");
   const [liveMatches, setLiveMatches] = useState<SimilarMatchSummary[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [dismissedConfirmationId, setDismissedConfirmationId] = useState<

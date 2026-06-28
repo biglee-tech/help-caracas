@@ -1,5 +1,5 @@
+import { AdmissionCard } from "@/components/admission-card";
 import type { EmergencyAdmission } from "@/lib/types";
-import { formatAdmissionDate } from "@/lib/dates";
 
 type AdmissionsListProps = {
   admissions: EmergencyAdmission[];
@@ -22,90 +22,9 @@ export function AdmissionsList({ admissions }: AdmissionsListProps) {
   return (
     <div className="min-w-0 max-w-full space-y-3">
       {admissions.map((admission) => (
-        <article
-          className="min-w-0 max-w-full rounded-3xl bg-white p-4 shadow-sm shadow-[rgba(22,63,82,0.08)] ring-1 ring-[var(--brand-border)] sm:p-5"
-          key={admission.id}
-        >
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="min-w-0 break-words text-base font-black text-[var(--foreground)] sm:text-lg">
-                  {admission.nombres} {admission.apellidos}
-                </h3>
-                <StatusTag status={admission.estado ?? "Pendiente"} />
-              </div>
-              <p className="mt-1 break-words text-sm text-[var(--brand-muted)]">
-                {admission.hospitales?.nombre ?? "Hospital no disponible"}
-                {admission.hospitales?.ciudad
-                  ? ` - ${admission.hospitales.ciudad}`
-                  : ""}
-              </p>
-            </div>
-            <div className="min-w-0 md:min-w-64 md:text-right">
-              <time
-                className="block text-sm font-semibold text-[var(--brand-muted)]"
-                dateTime={admission.fecha_ingreso}
-              >
-                {formatAdmissionDate(admission.fecha_ingreso)}
-              </time>
-            </div>
-          </div>
-
-          <div className="mt-4 grid min-w-0 gap-3 text-sm text-[var(--brand-muted)] sm:grid-cols-2 lg:grid-cols-5">
-            <Info label="Cedula" value={admission.cedula ?? "Sin dato"} />
-            <Info
-              label="Edad"
-              value={admission.edad === null ? "Sin dato" : String(admission.edad)}
-            />
-            <Info label="Sexo" value={admission.sexo ?? "Sin dato"} />
-            <Info
-              label="Procedencia"
-              value={admission.procedencia ?? "Sin dato"}
-            />
-            <Info label="Servicio" value={admission.servicio_requerido} />
-          </div>
-        </article>
+        <AdmissionCard admission={admission} key={admission.id} />
       ))}
     </div>
   );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-[var(--brand-border)]">
-      <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-muted)]">
-        {label}
-      </p>
-      <p className="mt-1 break-words font-semibold text-[var(--foreground)]">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function StatusTag({ status }: { status: string }) {
-  const className = getStatusClassName(status);
-
-  return (
-    <span className={`rounded-full border px-3 py-1 text-xs font-black ${className}`}>
-      {status}
-    </span>
-  );
-}
-
-function getStatusClassName(status: string) {
-  switch (status) {
-    case "Fallecido":
-      return "border-red-200 bg-red-50 text-red-700";
-    case "Atendido":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    case "En atencion":
-      return "border-sky-200 bg-sky-50 text-sky-700";
-    case "Referido":
-      return "border-violet-200 bg-violet-50 text-violet-700";
-    case "Pendiente":
-    default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
-  }
 }
 

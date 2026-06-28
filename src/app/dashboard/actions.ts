@@ -14,6 +14,7 @@ import {
   findSimilarAdmissions,
   toSimilarMatchSummary,
 } from "@/lib/similar-admissions";
+import { ADMISSION_SELECT, normalizeAdmissionRow } from "@/lib/admissions-query";
 import { createClient } from "@/lib/supabase/server";
 import type { AdmissionActionState, EditAdmissionState, EmergencyAdmission } from "@/lib/types";
 import {
@@ -33,24 +34,6 @@ function readExistingAdmissionId(formData: FormData) {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
 
-function normalizeAdmissionRow(data: unknown): EmergencyAdmission | null {
-  if (!data || typeof data !== "object") {
-    return null;
-  }
-
-  const admission = data as EmergencyAdmission & {
-    hospitales?: EmergencyAdmission["hospitales"] | EmergencyAdmission["hospitales"][];
-  };
-  const hospital = Array.isArray(admission.hospitales)
-    ? admission.hospitales[0]
-    : admission.hospitales;
-
-  return {
-    ...admission,
-    hospitales: hospital ?? null,
-  };
-}
-
 async function completarVaciosExistente(
   supabase: Awaited<ReturnType<typeof createClient>>,
   existingId: number,
@@ -58,9 +41,7 @@ async function completarVaciosExistente(
 ) {
   const { data, error: fetchError } = await supabase
     .from("ingresos_emergencia")
-    .select(
-      "id,nombres,apellidos,cedula,edad,sexo,procedencia,hospital_id,fecha_ingreso,servicio_requerido,estado,created_at,hospitales(id,nombre,ciudad)",
-    )
+    .select(ADMISSION_SELECT)
     .eq("id", existingId)
     .maybeSingle();
 
@@ -95,7 +76,7 @@ async function completarVaciosExistente(
     return {
       ok: false as const,
       message:
-        "Este registro ya tiene cedula, edad y procedencia completos. No se pueden agregar mas datos a ese ingreso.",
+        "Este registro ya tiene todos los datos completos. Usa 'Editar registro' para modificarlo.",
     };
   }
 
