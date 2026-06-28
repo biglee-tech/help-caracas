@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { createAdmission } from "@/app/dashboard/actions";
+import { AdmissionEditForm } from "@/components/admission-edit-form";
 import { SimilarMatchesPanel } from "@/components/similar-matches-panel";
 import { SubmitButton } from "@/components/submit-button";
 import type {
@@ -29,13 +30,37 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
   const [state, formAction] = useActionState(createAdmission, initialState);
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const [formInstanceKey, setFormInstanceKey] = useState(0);
+  const [editingMatch, setEditingMatch] = useState<SimilarMatchSummary | null>(null);
+  const [editSuccessMessage, setEditSuccessMessage] = useState<string | null>(null);
 
-  const displayMessage = state.ok
-    ? state.message
-    : showAcknowledged
-      ? "Esta persona ya estaba registrada. No se creo un nuevo ingreso."
-      : state.message;
-  const displayOk = state.ok || showAcknowledged;
+  const confirmationMatches =
+    state.needsConfirmation && !showAcknowledged ? state.similarMatches : undefined;
+
+  const displayMessage = editSuccessMessage
+    ? editSuccessMessage
+    : state.ok
+      ? state.message
+      : showAcknowledged
+        ? "Esta persona ya estaba registrada. No se creo un nuevo ingreso."
+        : state.message;
+  const displayOk = !!editSuccessMessage || state.ok || showAcknowledged;
+
+  if (editingMatch) {
+    return (
+      <div className="min-w-0 max-w-full space-y-5">
+        <AdmissionEditForm
+          match={editingMatch}
+          onCancel={() => setEditingMatch(null)}
+          onSuccess={(message) => {
+            setEditingMatch(null);
+            setShowAcknowledged(true);
+            setEditSuccessMessage(message);
+            setFormInstanceKey((k) => k + 1);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0 max-w-full space-y-5">
@@ -55,11 +80,7 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
       ) : null}
 
       <AdmissionFormFields
-        confirmationMatches={
-          state.needsConfirmation && !showAcknowledged
-            ? state.similarMatches
-            : undefined
-        }
+        confirmationMatches={confirmationMatches}
         fieldErrors={state.ok ? undefined : state.fieldErrors}
         formAction={formAction}
         hospitals={hospitals}
@@ -68,6 +89,7 @@ export function AdmissionForm({ hospitals }: AdmissionFormProps) {
           setShowAcknowledged(true);
           setFormInstanceKey((current) => current + 1);
         }}
+        onEditMatch={setEditingMatch}
       />
     </div>
   );
@@ -79,6 +101,7 @@ type AdmissionFormFieldsProps = {
   fieldErrors?: Record<string, string | null>;
   confirmationMatches?: SimilarMatchSummary[];
   onDuplicateAcknowledged: () => void;
+  onEditMatch: (match: SimilarMatchSummary) => void;
 };
 
 function AdmissionFormFields({
@@ -87,6 +110,7 @@ function AdmissionFormFields({
   fieldErrors,
   confirmationMatches,
   onDuplicateAcknowledged,
+  onEditMatch,
 }: AdmissionFormFieldsProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const confirmNotDuplicateRef = useRef<HTMLInputElement>(null);
@@ -454,6 +478,17 @@ function AdmissionFormFields({
               type="button"
             >
               Completar registro existente
+            </button>
+            <button
+              className="rounded-2xl border border-sky-300 bg-sky-50 px-5 py-3 font-bold text-sky-900 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!resolvedSelectedMatchId}
+              onClick={() => {
+                const match = confirmationMatches.find((m) => m.id === resolvedSelectedMatchId);
+                if (match) onEditMatch(match);
+              }}
+              type="button"
+            >
+              Editar registro
             </button>
             <button
               className="rounded-2xl border border-[var(--brand-border)] bg-white px-5 py-3 font-bold text-[var(--foreground)] transition hover:bg-[var(--background)]"

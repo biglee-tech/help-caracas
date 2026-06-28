@@ -15,10 +15,12 @@ import {
   toSimilarMatchSummary,
 } from "@/lib/similar-admissions";
 import { createClient } from "@/lib/supabase/server";
-import type { AdmissionActionState, EmergencyAdmission } from "@/lib/types";
+import type { AdmissionActionState, EditAdmissionState, EmergencyAdmission } from "@/lib/types";
 import {
   admissionSchema,
+  editAdmissionSchema,
   formDataToAdmissionInput,
+  formDataToEditAdmissionInput,
   getFieldErrors,
 } from "@/lib/validation";
 
@@ -223,5 +225,52 @@ export async function createAdmission(
     ok: true,
     message: successMessage,
     resetKey: Date.now(),
+  };
+}
+
+export async function editAdmission(
+  _prev: EditAdmissionState,
+  formData: FormData,
+): Promise<EditAdmissionState> {
+  const supabase = await createClient();
+
+  const parsed = editAdmissionSchema.safeParse(formDataToEditAdmissionInput(formData));
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Revisa los campos marcados antes de guardar.",
+      fieldErrors: getFieldErrors(parsed.error),
+    };
+  }
+
+  const { id, estado, servicio_requerido, cedula, edad, procedencia, sexo } = parsed.data;
+
+  const { error } = await supabase
+    .from("ingresos_emergencia")
+    .update({
+      estado,
+      servicio_requerido,
+      cedula: formatCedulaForDisplay(cedula),
+      edad: edad ?? null,
+      procedencia: procedencia ?? null,
+      sexo,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("editAdmission failed", { id, error: error.message });
+    return {
+      ok: false,
+      message:
+        "No pudimos actualizar el registro. Verifica que el ingreso pueda ser editado e intenta nuevamente.",
+    };
+  }
+
+  revalidatePath("/dashboard");
+
+  return {
+    ok: true,
+    message: `Registro #${id} actualizado correctamente.`,
   };
 }

@@ -60,3 +60,9 @@ export type AdmissionActionState = {
   needsConfirmation?: boolean;
   similarMatches?: SimilarMatchSummary[];
 };
+
+export type EditAdmissionState = {
+  ok: boolean;
+  message: string;
+  fieldErrors?: Record<string, string | null>;
+};

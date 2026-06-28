@@ -127,6 +127,34 @@ export function formDataToAdmissionInput(formData: FormData) {
   };
 }
 
+export const editAdmissionSchema = z.object({
+  id: z.coerce.number().int().positive("ID invalido"),
+  estado: admissionStatusSchema,
+  servicio_requerido: z
+    .string()
+    .trim()
+    .min(1, "Servicio requerido es obligatorio")
+    .max(500, "El texto es demasiado largo"),
+  cedula: optionalText,
+  edad: optionalAge,
+  procedencia: optionalText,
+  sexo: sexSchema,
+});
+
+export type EditAdmissionInput = z.infer<typeof editAdmissionSchema>;
+
+export function formDataToEditAdmissionInput(formData: FormData) {
+  return {
+    id: formData.get("id"),
+    estado: formData.get("estado"),
+    servicio_requerido: formData.get("servicio_requerido"),
+    cedula: formData.get("cedula"),
+    edad: formData.get("edad"),
+    procedencia: formData.get("procedencia"),
+    sexo: formData.get("sexo"),
+  };
+}
+
 export function getFieldErrors(error: z.ZodError) {
   return error.issues.reduce<Record<string, string>>((fieldErrors, issue) => {
     const field = String(issue.path[0] ?? "");
