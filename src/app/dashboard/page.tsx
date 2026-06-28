@@ -101,7 +101,7 @@ export default async function DashboardPage({
         <section className="min-w-0 h-fit max-w-full rounded-3xl bg-white p-4 shadow-sm ring-1 ring-[var(--brand-border)] sm:p-5 md:p-6">
           {hospitalsError ? (
             <Alert
-              message="No pudimos cargar hospitales."
+              message="No pudimos cargar centros de salud."
               tone="error"
             />
           ) : null}
@@ -170,7 +170,7 @@ export default async function DashboardPage({
 
           {admissionsResult.error ? (
             <Alert
-              message="No pudimos consultar ingresos. Revisa la conexion y las politicas RLS."
+              message="No pudimos consultar ingresos. Revisa la conexion e intenta nuevamente."
               tone="error"
             />
           ) : null}

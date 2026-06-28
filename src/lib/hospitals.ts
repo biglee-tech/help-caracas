@@ -39,7 +39,7 @@ export async function resolveHospitalId(
     .maybeSingle();
 
   if (lookupError) {
-    return { error: "No pudimos verificar el hospital." };
+    return { error: "No pudimos verificar el centro de salud." };
   }
 
   if (existing) {
@@ -67,7 +67,7 @@ export async function resolveHospitalId(
 
     return {
       error:
-        "No pudimos registrar el hospital. Verifica las politicas RLS de Supabase.",
+        "No pudimos registrar el centro de salud. Verifica la conexion e intenta nuevamente.",
       field: "hospital_nombre",
     };
   }

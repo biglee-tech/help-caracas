@@ -55,7 +55,7 @@ export async function createAdmission(
     return {
       ok: false,
       message:
-        "No pudimos registrar el ingreso. Verifica la conexion y las politicas de Supabase.",
+        "No pudimos registrar el ingreso. Verifica la conexion e intenta nuevamente.",
     };
   }
 
