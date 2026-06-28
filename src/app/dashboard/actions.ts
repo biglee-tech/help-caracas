@@ -16,13 +16,16 @@ import {
 } from "@/lib/similar-admissions";
 import { ADMISSION_SELECT, normalizeAdmissionRow } from "@/lib/admissions-query";
 import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
 import type { AdmissionActionState, EditAdmissionState, EmergencyAdmission } from "@/lib/types";
 import {
   admissionSchema,
+  admissionStatuses,
   editAdmissionSchema,
   formDataToAdmissionInput,
   formDataToEditAdmissionInput,
   getFieldErrors,
+  sexOptions,
 } from "@/lib/validation";
 
 function readFormFlag(formData: FormData, key: string) {
@@ -206,6 +209,89 @@ export async function createAdmission(
     ok: true,
     message: successMessage,
     resetKey: Date.now(),
+  };
+}
+
+export type CsvRow = {
+  nombres: string;
+  apellidos: string;
+  edad?: number;
+  sexo: string;
+  cedula?: string;
+  procedencia?: string;
+  servicio_requerido: string;
+  hospital_id: number;
+  fecha_ingreso?: string;
+  estado?: string;
+};
+
+export async function bulkCreateAdmissions(
+  rows: CsvRow[],
+): Promise<{ ok: boolean; message: string; imported: number; errors: number }> {
+  const supabase = await createClient();
+  let imported = 0;
+  let errors = 0;
+
+  for (const row of rows) {
+    const parsed = z.object({
+      nombres: z.string().min(1),
+      apellidos: z.string().min(1),
+      edad: z.coerce.number().int().min(0).max(130).optional(),
+      sexo: z.enum(sexOptions),
+      cedula: z.string().optional(),
+      procedencia: z.string().optional(),
+      servicio_requerido: z.string().min(1),
+      hospital_id: z.number().int().positive(),
+      fecha_ingreso: z.string().optional(),
+      estado: z.enum(admissionStatuses).optional().default("Pendiente"),
+    }).safeParse(row);
+
+    if (!parsed.success) {
+      errors++;
+      continue;
+    }
+
+    const record: Record<string, unknown> = {
+      nombres: parsed.data.nombres.trim(),
+      apellidos: parsed.data.apellidos.trim(),
+      sexo: parsed.data.sexo,
+      servicio_requerido: parsed.data.servicio_requerido.trim(),
+      hospital_id: parsed.data.hospital_id,
+      estado: parsed.data.estado,
+    };
+
+    if (parsed.data.cedula?.trim()) {
+      record.cedula = formatCedulaForDisplay(parsed.data.cedula.trim());
+    }
+    if (parsed.data.edad !== undefined) {
+      record.edad = parsed.data.edad;
+    }
+    if (parsed.data.procedencia?.trim()) {
+      record.procedencia = parsed.data.procedencia.trim();
+    }
+    if (parsed.data.fecha_ingreso?.trim()) {
+      record.fecha_ingreso = parsed.data.fecha_ingreso.trim();
+    }
+
+    const { error } = await supabase.from("ingresos_emergencia").insert(record);
+
+    if (error) {
+      errors++;
+    } else {
+      imported++;
+    }
+  }
+
+  revalidatePath("/dashboard");
+
+  return {
+    ok: errors === 0,
+    message:
+      errors === 0
+        ? `Se importaron ${imported} registros correctamente.`
+        : `Se importaron ${imported} registros (${errors} errores).`,
+    imported,
+    errors,
   };
 }
 

@@ -6,6 +6,7 @@ import { createAdmission } from "@/app/dashboard/actions";
 import { AdmissionEditForm } from "@/components/admission-edit-form";
 import { SimilarMatchesPanel } from "@/components/similar-matches-panel";
 import { SubmitButton } from "@/components/submit-button";
+import { CsvUpload } from "@/components/csv-upload";
 import type {
   AdmissionActionState,
   Hospital,
@@ -251,16 +252,19 @@ function AdmissionFormFields({
       <input name="confirm_not_duplicate" ref={confirmNotDuplicateRef} type="hidden" value="" />
       <input name="use_existing_id" ref={useExistingIdRef} type="hidden" value="" />
 
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
-          Nuevo registro
-        </p>
-        <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
-          Registrar ingreso
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-[var(--brand-muted)]">
-          Completa los datos esenciales del paciente y el servicio requerido.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent-strong)] sm:tracking-[0.2em]">
+            Nuevo registro
+          </p>
+          <h2 className="mt-1 text-xl font-black text-[var(--foreground)] sm:text-2xl">
+            Registrar ingreso
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--brand-muted)]">
+            Completa los datos esenciales del paciente y el servicio requerido.
+          </p>
+        </div>
+        <CsvUpload hospitals={hospitals} />
       </div>
 
       {!hasHospitals ? (
