@@ -1,12 +1,22 @@
 # Biglee Help Caracas
 
-Aplicacion Next.js para registrar y consultar ingresos hospitalarios durante la
-emergencia por terremoto en Venezuela.
+Registro centralizado de ingresos hospitalarios para emergencias. Creado tras el
+terremoto en Venezuela, junio 2026.
+
+Una iniciativa de [biglee.io](https://biglee.io).
+
+## Stack
+
+- [Next.js](https://nextjs.org/) — framework web
+- [Supabase](https://supabase.com/) — base de datos y autenticacion
+- [Tailwind CSS](https://tailwindcss.com/) — estilos
+- [Zod](https://zod.dev/) — validacion de datos
+- [TypeScript](https://www.typescriptlang.org/) — tipado
 
 ## Requisitos
 
-- Node.js compatible con Next.js.
-- Proyecto Supabase activo.
+- Node.js 20+
+- Proyecto Supabase activo
 
 ## Configuracion
 
@@ -27,6 +37,29 @@ La policy de Supabase para completar vacios (`Publico puede actualizar ingresos
 vacios`) la administra el equipo en produccion; no hace falta correr SQL extra
 desde este repo.
 
+## Uso
+
+### Registrar un ingreso
+
+El formulario de registro permite ingresar datos del paciente y el servicio
+requerido. Al guardar, la app busca personas parecidas en las ultimas 72 horas
+para evitar duplicados.
+
+### Importacion masiva via CSV
+
+El formulario incluye un boton "Cargar CSV" que abre un modal para importar
+multiples registros desde un archivo CSV con las columnas:
+
+```
+nombres, apellidos, edad, sexo, cedula, procedencia, servicio_requerido,
+hospital_id, fecha_ingreso, estado
+```
+
+### Consultar ingresos
+
+El panel de busqueda permite filtrar por nombre, cedula, procedencia, centro de
+salud o estado. Los resultados se muestran paginados.
+
 ## Registros similares y completar vacios
 
 Al registrar un ingreso, la app busca personas parecidas en las ultimas 72 horas.
@@ -36,6 +69,8 @@ Si hay coincidencias, el operador puede:
   falte cedula, edad, procedencia, sexo u otros campos vacios (no crea duplicado).
   Requiere que el ingreso existente tenga al menos cedula, edad o procedencia
   vacios (segun la policy de Supabase en produccion).
+- **Editar registro:** permite modificar estado, servicio, cedula, edad,
+  procedencia y sexo de un registro existente.
 - **Ya esta registrada:** cancela sin guardar nada nuevo.
 - **Registrar de todos modos:** crea un ingreso nuevo si es otra persona.
 
@@ -49,13 +84,16 @@ npm run dev
 
 Abre `http://localhost:3000`.
 
-## Seguridad
+### Comandos
 
-- La app permite registrar y consultar ingresos sin login.
-- Row Level Security queda habilitado para `hospitales` e
-  `ingresos_emergencia`, con policies publicas de lectura e insercion para el
-  rol `anon`, y actualizacion limitada a registros con campos incompletos.
-- El frontend solo usa la anon key de Supabase. No agregues `service_role` al
-  proyecto Next.js.
-- Cualquier persona con la URL podra usar el sistema. Considera proteccion en
-  Vercel, captcha o rate limiting si lo expones publicamente.
+| Comando | Descripcion |
+|---|---|
+| `npm run dev` | Inicia servidor de desarrollo |
+| `npm run build` | Compila para produccion |
+| `npm run start` | Inicia servidor de produccion |
+| `npm run lint` | Ejecuta ESLint |
+
+
+## Licencia
+
+MIT
