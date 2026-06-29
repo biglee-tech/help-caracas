@@ -25,5 +25,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# AI tool config (Claude Code)
+.claude/
+
+# Internal planning docs (not for public repo)
+MEJORAS-PLAN.md
+OPEN-SOURCE-PLAN.md
+
 # typescript
 *.tsbuildinfo
