@@ -1,61 +1,106 @@
-# Biglee Help Caracas
+# Help Caracas — Registro de Ingresos Hospitalarios
 
-Aplicacion Next.js para registrar y consultar ingresos hospitalarios durante la
-emergencia por terremoto en Venezuela.
+Herramienta open source para centralizar el registro de personas hospitalizadas
+tras el terremoto del 24 de junio de 2026 en Venezuela. Permite a voluntarios y
+personal de salud registrar, buscar y actualizar el estado de pacientes para que
+sus familias puedan localizarlos.
 
-## Requisitos
+**Stack:** Next.js 16 · React 19 · Supabase (Postgres + RLS) · Zod · Tailwind 4
 
-- Node.js compatible con Next.js.
-- Proyecto Supabase activo.
+---
 
-## Configuracion
+## Funcionalidades
 
-1. Copia `.env.example` a `.env.local`.
-2. Completa las variables:
+- Registro de ingresos con detección automática de duplicados (ventana de 7 días)
+- Búsqueda por nombre, cédula, procedencia, hospital y estado
+- Edición de registros existentes desde el listado
+- Importación masiva desde CSV (con normalizacion de datos OCR)
+- Exportación del listado filtrado a CSV
+- Detección de coincidencias similares al registrar (fuzzy matching por nombre)
+
+---
+
+## Quickstart
+
+### Requisitos
+
+- Node.js 18+
+- Una cuenta gratuita en [Supabase](https://supabase.com)
+
+### 1. Clonar e instalar
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+git clone https://github.com/biglee-tech/help-caracas.git
+cd help-caracas
+npm install
 ```
 
-3. Ejecuta el SQL de `supabase/schema.sql` en el SQL Editor de Supabase (solo en
-   instalaciones nuevas).
-4. Carga hospitales iniciales en la tabla `hospitales` o deja que cualquier
-   usuario los registre desde la opcion "Otro hospital" del formulario.
+### 2. Configurar Supabase
 
-La policy de Supabase para completar vacios (`Publico puede actualizar ingresos
-vacios`) la administra el equipo en produccion; no hace falta correr SQL extra
-desde este repo.
+1. Crea un proyecto nuevo en [app.supabase.com](https://app.supabase.com)
+2. Ve a **SQL Editor** y ejecuta `supabase/schema.sql`
+3. Copia las credenciales del proyecto (Settings → API)
 
-## Registros similares y completar vacios
+### 3. Variables de entorno
 
-Al registrar un ingreso, la app busca personas parecidas en las ultimas 72 horas.
-Si hay coincidencias, el operador puede:
+```bash
+cp .env.example .env.local
+```
 
-- **Completar registro existente:** agrega datos al registro seleccionado cuando
-  falte cedula, edad, procedencia, sexo u otros campos vacios (no crea duplicado).
-  Requiere que el ingreso existente tenga al menos cedula, edad o procedencia
-  vacios (segun la policy de Supabase en produccion).
-- **Ya esta registrada:** cancela sin guardar nada nuevo.
-- **Registrar de todos modos:** crea un ingreso nuevo si es otra persona.
+Edita `.env.local`:
 
-No se modifican nombres, apellidos ni datos que ya estaban completos.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-publica
+```
 
-## Desarrollo
+### 4. Correr en desarrollo
 
 ```bash
 npm run dev
 ```
 
-Abre `http://localhost:3000`.
+Abre [http://localhost:3000](http://localhost:3000).
 
-## Seguridad
+---
 
-- La app permite registrar y consultar ingresos sin login.
-- Row Level Security queda habilitado para `hospitales` e
-  `ingresos_emergencia`, con policies publicas de lectura e insercion para el
-  rol `anon`, y actualizacion limitada a registros con campos incompletos.
-- El frontend solo usa la anon key de Supabase. No agregues `service_role` al
-  proyecto Next.js.
-- Cualquier persona con la URL podra usar el sistema. Considera proteccion en
-  Vercel, captcha o rate limiting si lo expones publicamente.
+## Estructura del proyecto
+
+```
+src/
+  app/dashboard/       # Página principal + server actions
+  components/          # Componentes React
+  lib/                 # Utilidades: matching, validación, CSV, Supabase
+supabase/
+  schema.sql           # Esquema completo + RLS policies (ejecutar en proyecto nuevo)
+  migrations/          # Migraciones incrementales
+```
+
+---
+
+## Contribuir
+
+¿Quieres ayudar? Lee [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de trabajo.
+
+Issues marcados [`good first issue`](https://github.com/biglee-tech/help-caracas/labels/good%20first%20issue)
+son un buen punto de entrada.
+
+---
+
+## Seguridad y privacidad
+
+Esta app maneja datos personales de víctimas (nombre, cédula, edad, procedencia).
+Lee [SECURITY.md](SECURITY.md) para reportar vulnerabilidades o solicitar la
+eliminación de un dato personal. **No publiques PII en issues públicos.**
+
+Notas de seguridad:
+- El frontend solo usa la `anon key` de Supabase (nunca la `service_role`)
+- Row Level Security está habilitado en todas las tablas
+- Cualquier persona con la URL puede registrar y consultar ingresos; considera
+  agregar rate limiting o Vercel Firewall antes de exponer públicamente
+
+---
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Biglee
