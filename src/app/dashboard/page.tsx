@@ -6,6 +6,7 @@ import { AdmissionForm } from "@/components/admission-form";
 import { AdmissionsList } from "@/components/admissions-list";
 import { ExportCsvButton } from "@/components/export-csv-button";
 import { SearchButton } from "@/components/search-button";
+import { SiteFooter } from "@/components/site-footer";
 import { ADMISSION_SELECT, buildSearchOrClause, normalizeAdmissionRows, normalizeSearchTerm } from "@/lib/admissions-query";
 import { formatAdmissionDate } from "@/lib/dates";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -199,6 +200,7 @@ export default async function DashboardPage({
           />
         </section>
       </div>
+      <SiteFooter />
     </main>
   );
 }
