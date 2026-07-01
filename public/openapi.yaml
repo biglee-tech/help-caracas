@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Help Caracas — API pública de consulta
+  description: >
+    API de solo lectura para que sitios externos de búsqueda de personas
+    consulten el registro de ingresos hospitalarios. No permite registrar
+    ni editar — eso solo ocurre desde la aplicación, mediante voluntarios.
+  version: "1.0.0"
+  license:
+    name: MIT
+    url: https://github.com/biglee-tech/help-caracas/blob/main/LICENSE
+servers:
+  - url: /
+    description: Mismo origen que la aplicación desplegada
+paths:
+  /api/v1/status:
+    get:
+      summary: Estado del servicio
+      description: >
+        Comprueba si el servicio y la base de datos están disponibles
+        antes de realizar consultas. No está sujeto al rate limit de
+        las demás rutas. Devuelve 200 si todo está bien, 503 si hay
+        algún problema.
+      responses:
+        "200":
+          description: Servicio disponible.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "503":
+          description: Servicio o base de datos no disponibles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+  /api/v1/personas:
+    get:
+      summary: Buscar personas registradas
+      description: >
+        Devuelve un listado paginado de ingresos hospitalarios. Sin
+        parámetros, devuelve los más recientes primero. Limitado a 30
+        solicitudes por minuto por IP (ver respuesta 429). El filtro
+        de hospital es insensible a mayúsculas.
+      parameters:
+        - name: q
+          in: query
+          description: >
+            Texto libre: busca por nombres, apellidos, cédula, procedencia
+            o servicio requerido.
+          schema:
+            type: string
+            maxLength: 80
+        - name: hospital
+          in: query
+          description: >
+            Filtra por nombre del centro de salud (insensible a
+            mayúsculas). Usa /api/v1/hospitales para ver los nombres
+            disponibles.
+          schema:
+            type: string
+            maxLength: 80
+        - name: estado
+          in: query
+          description: Filtra por estado del ingreso.
+          schema:
+            type: string
+            enum: [Pendiente, "En atencion", Referido, Atendido, Fallecido]
+        - name: sexo
+          in: query
+          description: Filtra por sexo.
+          schema:
+            type: string
+            enum: [Masculino, Femenino, "No especificado"]
+        - name: sort
+          in: query
+          description: Orden de los resultados.
+          schema:
+            type: string
+            enum: [recientes, antiguos, nombre_asc, nombre_desc]
+            default: recientes
+        - name: page
+          in: query
+          description: Número de página (1-indexado).
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Resultados por página (máximo 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Resultados encontrados.
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/X-RateLimit-Reset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonasResponse"
+        "429":
+          description: Límite de solicitudes excedido para esta IP.
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/X-RateLimit-Reset"
+            Retry-After:
+              description: Segundos a esperar antes de reintentar.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error de configuración o de consulta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/hospitales:
+    get:
+      summary: Listar centros de salud
+      description: >
+        Catálogo de nombres de hospitales reportando, para usarlos como
+        valores válidos del filtro ?hospital= de /api/v1/personas. No
+        expone el id interno. Comparte el mismo límite de rate limit.
+      responses:
+        "200":
+          description: Listado de hospitales.
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/X-RateLimit-Reset"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Hospital"
+        "429":
+          description: Límite de solicitudes excedido.
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/X-RateLimit-Reset"
+            Retry-After:
+              description: Segundos a esperar antes de reintentar.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error de configuración o de consulta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  headers:
+    X-RateLimit-Limit:
+      description: Máximo de solicitudes permitidas por ventana (60s).
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Solicitudes restantes en la ventana actual.
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: Segundos hasta que se reinicie la ventana.
+      schema:
+        type: integer
+  schemas:
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        db:
+          type: string
+          enum: [ok, error]
+        timestamp:
+          type: string
+          format: date-time
+    Hospital:
+      type: object
+      nullable: true
+      properties:
+        nombre:
+          type: string
+        ciudad:
+          type: string
+          nullable: true
+    Persona:
+      type: object
+      properties:
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        cedula:
+          type: string
+          nullable: true
+          example: "V-12345678"
+        edad:
+          type: integer
+          nullable: true
+        sexo:
+          type: string
+        procedencia:
+          type: string
+          nullable: true
+        hospital:
+          $ref: "#/components/schemas/Hospital"
+        fecha_ingreso:
+          type: string
+          format: date-time
+        estado:
+          type: string
+          nullable: true
+          enum: [Pendiente, "En atencion", Referido, Atendido, Fallecido, null]
+    PersonasResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Persona"
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string

@@ -17,6 +17,9 @@ sus familias puedan localizarlos.
 - Importación masiva desde CSV (con normalizacion de datos OCR)
 - Exportación del listado filtrado a CSV
 - Detección de coincidencias similares al registrar (fuzzy matching por nombre)
+- API pública de solo lectura (`/api/v1/personas`) para que otros sitios de
+  búsqueda de personas consulten el registro — ver
+  [documentación interactiva](/docs) y [openapi.yaml](public/openapi.yaml)
 
 ---
 
